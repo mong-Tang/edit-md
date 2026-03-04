@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import type { FileDescriptor } from '../types/file'
 import type { RecentFileEntry } from '../types/recentFile'
 
 const STORAGE_KEY = 'edit-md-recent-files'
-const MAX_RECENT_FILES = 5
+const MAX_RECENT_FILES = 10
+
+function canReopenRecentFile(file: Pick<RecentFileEntry, 'backend' | 'path'>) {
+  return file.backend === 'tauri' && typeof file.path === 'string' && file.path.length > 0
+}
 
 function loadRecentFiles(): RecentFileEntry[] {
   try {
@@ -17,7 +21,8 @@ function loadRecentFiles(): RecentFileEntry[] {
       (item) =>
         typeof item?.name === 'string' &&
         typeof item?.updatedAt === 'string' &&
-        (item?.backend === 'browser' || item?.backend === 'tauri'),
+        (item?.backend === 'browser' || item?.backend === 'tauri') &&
+        canReopenRecentFile(item),
     )
   } catch {
     return []
@@ -33,7 +38,7 @@ export function useRecentFiles() {
 
   const addRecentFile = (file: FileDescriptor) => {
     const trimmed = file.name.trim()
-    if (!trimmed) return
+    if (!trimmed || file.backend !== 'tauri' || !file.path) return
 
     setRecentFiles((current) => {
       const nextEntry: RecentFileEntry = {
@@ -50,8 +55,17 @@ export function useRecentFiles() {
     })
   }
 
+  const removeRecentFile = (file: Pick<RecentFileEntry, 'backend' | 'name' | 'path'>) => {
+    setRecentFiles((current) =>
+      current.filter(
+        (item) => item.backend !== file.backend || item.name !== file.name || item.path !== file.path,
+      ),
+    )
+  }
+
   return {
     addRecentFile,
     recentFiles,
+    removeRecentFile,
   }
 }

@@ -1,21 +1,8 @@
-import type { RecentFileEntry } from '../types/recentFile'
+﻿import type { RecentFileEntry } from '../types/recentFile'
 
 type RecentFilesProps = {
   onSelect: (file: RecentFileEntry) => void
   recentFiles: RecentFileEntry[]
-}
-
-function formatRecentDate(value: string) {
-  try {
-    return new Intl.DateTimeFormat('ko-KR', {
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      month: '2-digit',
-    }).format(new Date(value))
-  } catch {
-    return value
-  }
 }
 
 export function RecentFiles({ onSelect, recentFiles }: RecentFilesProps) {
@@ -37,7 +24,6 @@ export function RecentFiles({ onSelect, recentFiles }: RecentFilesProps) {
             >
               <span className="recent-file-chip__name">{file.name}</span>
               <span className="recent-file-chip__backend">{file.backend}</span>
-              <span className="recent-file-chip__time">{formatRecentDate(file.updatedAt)}</span>
             </button>
           ))}
         </div>

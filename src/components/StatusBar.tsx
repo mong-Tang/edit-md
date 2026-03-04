@@ -1,4 +1,4 @@
-import type { ThemeMode } from '../types/theme'
+﻿import type { ThemeMode } from '../types/theme'
 
 type StatusBarProps = {
   fileName: string
@@ -11,10 +11,18 @@ type StatusBarProps = {
 export function StatusBar({ fileName, message, resolvedTheme, statusText, themeMode }: StatusBarProps) {
   return (
     <footer className="statusbar">
-      <span>파일: {fileName}</span>
-      <span>상태: {statusText}</span>
-      <span>{message ?? '준비됨'}</span>
-      <span>테마: {themeMode} → {resolvedTheme}</span>
+      <span className="statusbar__item" title={`파일: ${fileName}`}>
+        파일: {fileName}
+      </span>
+      <span className="statusbar__item" title={`상태: ${statusText}`}>
+        상태: {statusText}
+      </span>
+      <span className="statusbar__item" title={message ?? '준비됨'}>
+        {message ?? '준비됨'}
+      </span>
+      <span className="statusbar__item" title={`테마: ${themeMode} → ${resolvedTheme}`}>
+        테마: {themeMode} → {resolvedTheme}
+      </span>
     </footer>
   )
 }

@@ -7,6 +7,8 @@
     "core:default",
     "dialog:allow-open",
     "dialog:allow-save",
-    "fs:default"
+    "fs:default",
+    "opener:allow-default-urls",
+    "opener:allow-open-path"
   ]
 }

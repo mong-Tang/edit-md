@@ -1,0 +1,101 @@
+﻿<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>edit-md</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg-start: #0f172a;
+        --bg-end: #1e293b;
+        --panel: rgba(15, 23, 42, 0.76);
+        --border: rgba(148, 163, 184, 0.22);
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --accent: #f59e0b;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: radial-gradient(circle at top, var(--bg-end), var(--bg-start));
+        color: var(--text);
+      }
+      body {
+        display: grid;
+        place-items: center;
+      }
+      .splash {
+        width: min(420px, calc(100vw - 32px));
+        padding: 28px 30px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--panel);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+      }
+      .splash__brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 18px;
+        font-size: 22px;
+        font-weight: 700;
+      }
+      .splash__logo {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #f59e0b, #fb7185);
+        color: #111827;
+        font-weight: 800;
+      }
+      .splash__title {
+        margin: 0 0 8px;
+        font-size: 18px;
+        font-weight: 700;
+      }
+      .splash__desc {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .splash__bar {
+        margin-top: 22px;
+        height: 6px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.16);
+      }
+      .splash__bar::after {
+        content: '';
+        display: block;
+        width: 42%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #f59e0b, #fcd34d);
+        animation: loading 1.15s ease-in-out infinite alternate;
+      }
+      @keyframes loading {
+        from { transform: translateX(-12%); }
+        to { transform: translateX(140%); }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="splash" aria-label="시작 화면">
+      <div class="splash__brand">
+        <div class="splash__logo">md</div>
+        <div>edit-md</div>
+      </div>
+      <h1 class="splash__title">앱을 준비하고 있습니다</h1>
+      <p class="splash__desc">빠르게 편집을 시작할 수 있도록 작업 공간을 불러오는 중입니다.</p>
+      <div class="splash__bar" aria-hidden="true"></div>
+    </section>
+  </body>
+</html>
