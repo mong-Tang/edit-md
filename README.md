@@ -138,6 +138,7 @@ edit-md/
 ## 작업 메모
 
 - GitHub 이슈 초안: [`docs/GITHUB_ISSUES.md`](./docs/GITHUB_ISSUES.md)
+- Tauri 설치/검증 체크리스트: [`docs/TAURI_SETUP.md`](./docs/TAURI_SETUP.md)
 
 ## 참고
 
