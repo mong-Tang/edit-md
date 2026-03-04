@@ -2,7 +2,27 @@
 
 `edit-md`에서 바로 이슈로 옮길 수 있도록 정리한 초안입니다.
 
+## 우선순위 기준
+
+- `P0`: 앱 실행/저장/열기처럼 핵심 동작에 직접 영향
+- `P1`: 사용성 완성도와 데스크톱 경험 개선
+- `P2`: 품질 개선, 배포 준비, 최적화
+
+## 추천 작업 순서
+
+1. Tauri 실행 환경 검증
+2. 네이티브 파일 열기/저장 연결
+3. 최근 파일 재열기 완성
+4. 앱 메뉴 및 단축키 추가
+5. 내보내기 품질 개선
+6. 프리뷰 품질 개선
+7. 코드 하이라이트 번들 최적화
+8. 릴리스 준비
+
 ## 1. Tauri 실행 환경 검증
+
+### 우선순위
+`P0`
 
 ### 제목
 `build: verify Tauri runtime on Windows`
@@ -21,6 +41,9 @@
 
 ## 2. 네이티브 파일 열기/저장 연결
 
+### 우선순위
+`P0`
+
 ### 제목
 `feat: connect native file open and save with Tauri`
 
@@ -38,6 +61,9 @@
 
 ## 3. 최근 파일 재열기 완성
 
+### 우선순위
+`P1`
+
 ### 제목
 `feat: reopen recent files using stored file path`
 
@@ -54,6 +80,9 @@
 
 ## 4. 앱 메뉴 및 단축키 추가
 
+### 우선순위
+`P1`
+
 ### 제목
 `feat: add desktop menu and shortcuts`
 
@@ -68,6 +97,9 @@
 ---
 
 ## 5. 프리뷰 품질 개선
+
+### 우선순위
+`P2`
 
 ### 제목
 `feat: improve markdown preview quality`
@@ -85,6 +117,9 @@
 
 ## 6. 코드 하이라이트 번들 최적화
 
+### 우선순위
+`P2`
+
 ### 제목
 `perf: reduce syntax highlighting bundle size`
 
@@ -101,6 +136,9 @@
 
 ## 7. 내보내기 품질 개선
 
+### 우선순위
+`P1`
+
 ### 제목
 `feat: improve html and pdf export quality`
 
@@ -115,6 +153,9 @@
 ---
 
 ## 8. 릴리스 준비
+
+### 우선순위
+`P2`
 
 ### 제목
 `chore: prepare first desktop release`
