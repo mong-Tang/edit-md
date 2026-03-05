@@ -21,6 +21,7 @@ const DEFAULT_UPDATE_FEED_URL = 'https://raw.githubusercontent.com/mong-Tang/edi
 const UPDATE_FEED_URL =
   (import.meta.env.VITE_UPDATE_FEED_URL as string | undefined)?.trim() || DEFAULT_UPDATE_FEED_URL
 const START_GUIDE_HIDDEN_KEY = 'edit-md.hide-start-guide'
+const OPEN_FILES_EVENT = 'app://open-files'
 
 type UpdateFeed = {
   downloadUrl: string
@@ -301,6 +302,73 @@ export function App() {
     addRecentFile(file.descriptor)
     setStatus('status.open.done', { name: file.descriptor.name })
   }
+
+  const handleOpenPath = useCallback(
+    async (path: string) => {
+      if (!isTauri() || !path) return false
+
+      try {
+        const { tauriOpenMarkdownPath } = await import('./services/tauriApi')
+        const opened = await tauriOpenMarkdownPath(path)
+        if (!opened) return false
+
+        applyOpenedFile(opened)
+        setIsStartScreen(false)
+        addRecentFile(opened.descriptor)
+        setStatus('status.open.done', { name: opened.descriptor.name })
+        return true
+      } catch (error) {
+        console.error('[App] open by path failed', { path, error })
+        return false
+      }
+    },
+    [addRecentFile, applyOpenedFile, setStatus],
+  )
+
+  useEffect(() => {
+    if (!isTauri()) return
+
+    let unlisten: (() => void) | undefined
+    let disposed = false
+
+    void (async () => {
+      try {
+        const [{ invoke }, { listen }] = await Promise.all([
+          import('@tauri-apps/api/core'),
+          import('@tauri-apps/api/event'),
+        ])
+
+        const openRequestedPaths = async (incomingPaths: string[] = []) => {
+          const pendingPaths = await invoke<string[]>('take_pending_open_files')
+          const merged = [...incomingPaths, ...(pendingPaths ?? [])]
+          const uniquePaths = [...new Set(merged.filter((path) => typeof path === 'string' && path.length > 0))]
+
+          for (const path of uniquePaths) {
+            await handleOpenPath(path)
+          }
+        }
+
+        const dispose = await listen<{ paths?: string[] }>(OPEN_FILES_EVENT, (event) => {
+          void openRequestedPaths(event.payload?.paths ?? [])
+        })
+
+        if (disposed) {
+          dispose()
+          return
+        }
+
+        unlisten = dispose
+        await openRequestedPaths()
+      } catch (error) {
+        console.error('[App] open-files listener registration failed', { error })
+      }
+    })()
+
+    return () => {
+      disposed = true
+      unlisten?.()
+    }
+  }, [handleOpenPath])
 
   const handleRecentFileSelect = async (file: RecentFileEntry) => {
     if (file.backend === 'browser' || !file.path) {

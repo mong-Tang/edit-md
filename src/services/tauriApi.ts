@@ -82,6 +82,20 @@ export async function tauriOpenMarkdownFile(): Promise<OpenedFile | null> {
   }
 }
 
+export async function tauriOpenMarkdownPath(path: string): Promise<OpenedFile | null> {
+  if (!path) {
+    return null
+  }
+
+  const fs = await loadFsModule()
+  const content = await fs.readTextFile(path)
+
+  return {
+    content,
+    descriptor: createTauriDescriptor(path),
+  }
+}
+
 export async function tauriSaveFile(content: string, file: FileDescriptor): Promise<FileDescriptor> {
   if (!file.path) {
     throw new Error('Tauri saveFile requires a file path.')
