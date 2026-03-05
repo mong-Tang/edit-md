@@ -17,7 +17,9 @@ import { createHtmlDocument, createPdfBytesFromElement } from './lib/export'
 import { runtimeFileService } from './services/runtimeFileService'
 import type { RecentFileEntry } from './types/recentFile'
 
-const UPDATE_FEED_URL = (import.meta.env.VITE_UPDATE_FEED_URL as string | undefined)?.trim()
+const DEFAULT_UPDATE_FEED_URL = 'https://raw.githubusercontent.com/mong-Tang/edit-md/main/update.json'
+const UPDATE_FEED_URL =
+  (import.meta.env.VITE_UPDATE_FEED_URL as string | undefined)?.trim() || DEFAULT_UPDATE_FEED_URL
 const START_GUIDE_HIDDEN_KEY = 'edit-md.hide-start-guide'
 
 type UpdateFeed = {
