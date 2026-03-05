@@ -1,14 +1,18 @@
-﻿import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useI18n } from '../i18n'
 import type { RecentFileEntry } from '../types/recentFile'
 import type { ThemeMode } from '../types/theme'
 
 type ToolbarProps = {
   allowEditorContextMenu: boolean
+  onCheckForUpdates: () => void
   onOpenMongTangAi: () => void
   onCopy: () => void
   onCut: () => void
   onExportHtml: () => void
   onExportPdf: () => void
+  onCloseFile: () => void
+  onExit: () => void
   onNewFile: () => void
   onOpen: () => void
   onPaste: () => void
@@ -17,29 +21,27 @@ type ToolbarProps = {
   recentFiles: RecentFileEntry[]
   onSave: () => void
   onSaveAs: () => void
+  onShowVersionInfo: () => void
   onSelectAll: () => void
   onToggleEditorContextMenu: () => void
+  onShowStartGuide: () => void
   onThemeChange: (theme: ThemeMode) => void
   onUndo: () => void
   themeMode: ThemeMode
 }
 
-type MenuKey = 'edit' | 'file' | 'view' | null
-
-function getRecentTooltip(file: RecentFileEntry) {
-  if (file.path) return file.path
-  return file.backend === 'browser'
-    ? '브라우저 방식으로 기록된 항목은 경로를 제공하지 않습니다.'
-    : file.name
-}
+type MenuKey = 'edit' | 'file' | 'help' | 'view' | null
 
 export function Toolbar({
   allowEditorContextMenu,
+  onCheckForUpdates,
   onOpenMongTangAi,
   onCopy,
   onCut,
   onExportHtml,
   onExportPdf,
+  onCloseFile,
+  onExit,
   onNewFile,
   onOpen,
   onPaste,
@@ -48,12 +50,15 @@ export function Toolbar({
   recentFiles,
   onSave,
   onSaveAs,
+  onShowVersionInfo,
   onSelectAll,
   onToggleEditorContextMenu,
+  onShowStartGuide,
   onThemeChange,
   onUndo,
   themeMode,
 }: ToolbarProps) {
+  const { locale, setLocale, t } = useI18n()
   const [openMenu, setOpenMenu] = useState<MenuKey>(null)
   const rootRef = useRef<HTMLElement | null>(null)
 
@@ -88,9 +93,14 @@ export function Toolbar({
     action()
   }
 
+  const getRecentTooltip = (file: RecentFileEntry) => {
+    if (file.path) return file.path
+    return file.backend === 'browser' ? t('toolbar.recent.browserTooltip') : file.name
+  }
+
   return (
     <header className="toolbar" ref={rootRef}>
-      <div className="menu-bar" role="menubar" aria-label="상단 메뉴">
+      <div className="menu-bar" role="menubar" aria-label={t('menu.top.aria')}>
         <div className="menu">
           <button
             type="button"
@@ -99,33 +109,42 @@ export function Toolbar({
             aria-haspopup="true"
             onClick={() => toggleMenu('file')}
           >
-            파일(F)
+            {t('menu.file')}
           </button>
           {openMenu === 'file' ? (
-            <div className="menu__dropdown" role="menu" aria-label="파일 메뉴">
+            <div className="menu__dropdown" role="menu" aria-label={t('menu.file.aria')}>
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onNewFile)}>
-                새 파일
+                {t('menu.file.new')}
               </button>
+              <div className="menu__separator" />
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onOpen)}>
-                열기
+                {t('menu.file.open')}
               </button>
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onSave)}>
-                저장
+                {t('menu.file.save')}
               </button>
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onSaveAs)}>
-                다른 이름으로 저장
+                {t('menu.file.saveAs')}
+              </button>
+              <div className="menu__separator" />
+              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onCloseFile)}>
+                {t('menu.file.close')}
               </button>
               <div className="menu__separator" />
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onExportHtml)}>
-                HTML 내보내기
+                {t('menu.file.exportHtml')}
               </button>
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onExportPdf)}>
-                PDF 내보내기
+                {t('menu.file.exportPdf')}
               </button>
               <div className="menu__separator" />
-              <div className="menu__section-title">최근 파일</div>
+              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onExit)}>
+                {t('menu.file.exit')}
+              </button>
+              <div className="menu__separator" />
+              <div className="menu__section-title">{t('menu.file.recent')}</div>
               {recentFiles.length === 0 ? (
-                <div className="menu__hint">표시할 최근 파일이 없습니다.</div>
+                <div className="menu__hint">{t('menu.file.recent.empty')}</div>
               ) : (
                 recentFiles.map((file) => (
                   <button
@@ -152,28 +171,28 @@ export function Toolbar({
             aria-haspopup="true"
             onClick={() => toggleMenu('edit')}
           >
-            편집(E)
+            {t('menu.edit')}
           </button>
           {openMenu === 'edit' ? (
-            <div className="menu__dropdown" role="menu" aria-label="편집 메뉴">
+            <div className="menu__dropdown" role="menu" aria-label={t('menu.edit.aria')}>
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onUndo)}>
-                실행 취소
+                {t('menu.edit.undo')}
               </button>
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onRedo)}>
-                다시 실행
+                {t('menu.edit.redo')}
               </button>
               <div className="menu__separator" />
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onCut)}>
-                잘라내기
+                {t('menu.edit.cut')}
               </button>
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onCopy)}>
-                복사
+                {t('menu.edit.copy')}
               </button>
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onPaste)}>
-                붙여넣기
+                {t('menu.edit.paste')}
               </button>
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onSelectAll)}>
-                모두 선택
+                {t('menu.edit.selectAll')}
               </button>
             </div>
           ) : null}
@@ -187,10 +206,10 @@ export function Toolbar({
             aria-haspopup="true"
             onClick={() => toggleMenu('view')}
           >
-            보기(V)
+            {t('menu.view')}
           </button>
           {openMenu === 'view' ? (
-            <div className="menu__dropdown" role="menu" aria-label="보기 메뉴">
+            <div className="menu__dropdown" role="menu" aria-label={t('menu.view.aria')}>
               <button
                 type="button"
                 className="menu__item menu__item--toggle"
@@ -198,8 +217,10 @@ export function Toolbar({
                 aria-checked={themeMode === 'light'}
                 onClick={() => runMenuAction(() => onThemeChange('light'))}
               >
-                <span className="menu__check" aria-hidden="true">{themeMode === 'light' ? '✓' : ''}</span>
-                <span>라이트 테마</span>
+                <span className="menu__check" aria-hidden="true">
+                  {themeMode === 'light' ? '✓' : ''}
+                </span>
+                <span>{t('menu.view.theme.light')}</span>
               </button>
               <button
                 type="button"
@@ -208,8 +229,10 @@ export function Toolbar({
                 aria-checked={themeMode === 'dark'}
                 onClick={() => runMenuAction(() => onThemeChange('dark'))}
               >
-                <span className="menu__check" aria-hidden="true">{themeMode === 'dark' ? '✓' : ''}</span>
-                <span>다크 테마</span>
+                <span className="menu__check" aria-hidden="true">
+                  {themeMode === 'dark' ? '✓' : ''}
+                </span>
+                <span>{t('menu.view.theme.dark')}</span>
               </button>
               <button
                 type="button"
@@ -218,8 +241,10 @@ export function Toolbar({
                 aria-checked={themeMode === 'system'}
                 onClick={() => runMenuAction(() => onThemeChange('system'))}
               >
-                <span className="menu__check" aria-hidden="true">{themeMode === 'system' ? '✓' : ''}</span>
-                <span>시스템 테마</span>
+                <span className="menu__check" aria-hidden="true">
+                  {themeMode === 'system' ? '✓' : ''}
+                </span>
+                <span>{t('menu.view.theme.system')}</span>
               </button>
               <div className="menu__separator" />
               <button
@@ -229,8 +254,62 @@ export function Toolbar({
                 aria-checked={allowEditorContextMenu}
                 onClick={() => runMenuAction(onToggleEditorContextMenu)}
               >
-                <span className="menu__check" aria-hidden="true">{allowEditorContextMenu ? '✓' : ''}</span>
-                <span>편집창 우클릭 활성</span>
+                <span className="menu__check" aria-hidden="true">
+                  {allowEditorContextMenu ? '✓' : ''}
+                </span>
+                <span>{t('menu.view.contextMenu')}</span>
+              </button>
+              <div className="menu__separator" />
+              <div className="menu__section-title">{t('menu.view.language')}</div>
+              <button
+                type="button"
+                className="menu__item menu__item--toggle"
+                role="menuitemradio"
+                aria-checked={locale === 'ko'}
+                onClick={() => runMenuAction(() => setLocale('ko'))}
+              >
+                <span className="menu__check" aria-hidden="true">
+                  {locale === 'ko' ? '✓' : ''}
+                </span>
+                <span>{t('menu.view.language.ko')}</span>
+              </button>
+              <button
+                type="button"
+                className="menu__item menu__item--toggle"
+                role="menuitemradio"
+                aria-checked={locale === 'en'}
+                onClick={() => runMenuAction(() => setLocale('en'))}
+              >
+                <span className="menu__check" aria-hidden="true">
+                  {locale === 'en' ? '✓' : ''}
+                </span>
+                <span>{t('menu.view.language.en')}</span>
+              </button>
+              <div className="menu__separator" />
+              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onShowStartGuide)}>
+                {t('menu.view.showStartGuide')}
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="menu">
+          <button
+            type="button"
+            className="menu__trigger"
+            aria-expanded={openMenu === 'help'}
+            aria-haspopup="true"
+            onClick={() => toggleMenu('help')}
+          >
+            {t('menu.help')}
+          </button>
+          {openMenu === 'help' ? (
+            <div className="menu__dropdown" role="menu" aria-label={t('menu.help.aria')}>
+              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onCheckForUpdates)}>
+                {t('menu.help.checkUpdates')}
+              </button>
+              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onShowVersionInfo)}>
+                {t('menu.help.versionInfo')}
               </button>
             </div>
           ) : null}
@@ -238,7 +317,7 @@ export function Toolbar({
       </div>
 
       <button type="button" className="toolbar__link" title="https://mongtang-ai.vercel.app" onClick={onOpenMongTangAi}>
-        mongTang AI
+        {t('toolbar.link.mongTang')}
       </button>
     </header>
   )

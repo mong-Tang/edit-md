@@ -1,10 +1,10 @@
 {
     "$schema":  "https://schema.tauri.app/config/2",
-    "productName":  "edit-md",
+    "productName":  "mongTang.md",
     "version":  "0.1.0",
     "identifier":  "com.editmd.app",
     "build":  {
-                  "beforeDevCommand":  "npm run dev",
+                  "beforeDevCommand":  "npm run dev -- --port 5173 --strictPort",
                   "beforeBuildCommand":  "npm run build",
                   "frontendDist":  "../dist",
                   "devUrl":  "http://localhost:5173"
@@ -13,11 +13,13 @@
                 "windows":  [
                                 {
                                     "label":  "main",
-                                    "title":  "edit-md",
+                                    "title":  "mongTang.md",
                                     "width":  1440,
                                     "height":  900,
                                     "minWidth":  1000,
                                     "minHeight":  640,
+                                    "center":  true,
+                                    "backgroundColor":  "#0f172a",
                                     "resizable":  true
                                 }
                             ]
@@ -28,7 +30,11 @@
                                    "nsis"
                                ],
                    "icon":  [
-
+                                "icons/32x32.png",
+                                "icons/128x128.png",
+                                "icons/128x128@2x.png",
+                                "icons/icon.icns",
+                                "icons/icon.ico"
                             ]
                }
 }

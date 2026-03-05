@@ -3,6 +3,7 @@ import { browserFileService } from './browserFileService'
 import {
   tauriOpenMarkdownFile,
   tauriReopenRecentFile,
+  tauriSaveBinaryFileAs,
   tauriSaveFile,
   tauriSaveFileAs,
 } from './tauriApi'
@@ -46,10 +47,20 @@ export const tauriFileService: FileService = {
     }
   },
 
+  async saveBinaryFileAs(payload) {
+    try {
+      return await tauriSaveBinaryFileAs(payload.name, payload.content)
+    } catch {
+      logTauriStub('saveBinaryFileAs')
+      return browserFileService.saveBinaryFileAs(payload)
+    }
+  },
+
   async reopenRecentFile(file) {
     try {
       return await tauriReopenRecentFile(file)
-    } catch {
+    } catch (error) {
+      console.error('[TauriFileService] reopenRecentFile error', { file, error })
       logTauriStub('reopenRecentFile')
       return browserFileService.reopenRecentFile(file)
     }

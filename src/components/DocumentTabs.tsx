@@ -1,4 +1,6 @@
-﻿type DocumentTabItem = {
+import { useI18n } from '../i18n'
+
+type DocumentTabItem = {
   fileName: string
   id: string
   isDirty: boolean
@@ -12,8 +14,10 @@ type DocumentTabsProps = {
 }
 
 export function DocumentTabs({ activeTabId, onClose, onSelect, tabs }: DocumentTabsProps) {
+  const { t } = useI18n()
+
   return (
-    <nav className="document-tabs" aria-label="열린 문서">
+    <nav className="document-tabs" aria-label={t('tab.aria')}>
       {tabs.map((tab) => (
         <button
           key={tab.id}
@@ -24,12 +28,16 @@ export function DocumentTabs({ activeTabId, onClose, onSelect, tabs }: DocumentT
           <span className="document-tab__name" title={tab.fileName}>
             {tab.fileName}
           </span>
-          {tab.isDirty ? <span className="document-tab__dirty" aria-hidden="true">●</span> : null}
+          {tab.isDirty ? (
+            <span className="document-tab__dirty" aria-hidden="true">
+              ●
+            </span>
+          ) : null}
           <span
             role="button"
             tabIndex={0}
             className="document-tab__close"
-            aria-label={`${tab.fileName} 닫기`}
+            aria-label={t('tab.close', { name: tab.fileName })}
             onClick={(event) => {
               event.stopPropagation()
               onClose(tab.id)
@@ -49,3 +57,4 @@ export function DocumentTabs({ activeTabId, onClose, onSelect, tabs }: DocumentT
     </nav>
   )
 }
+

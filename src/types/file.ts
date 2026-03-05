@@ -17,3 +17,9 @@ export type SaveFilePayload = {
   mimeType: string
   name: string
 }
+
+export type SaveBinaryFilePayload = {
+  content: ArrayBuffer
+  mimeType: string
+  name: string
+}

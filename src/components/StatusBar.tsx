@@ -1,28 +1,27 @@
-﻿import type { ThemeMode } from '../types/theme'
+import { useI18n } from '../i18n'
 
 type StatusBarProps = {
   fileName: string
   message?: string
-  resolvedTheme: Exclude<ThemeMode, 'system'>
   statusText: string
-  themeMode: ThemeMode
 }
 
-export function StatusBar({ fileName, message, resolvedTheme, statusText, themeMode }: StatusBarProps) {
+export function StatusBar({ fileName, message, statusText }: StatusBarProps) {
+  const { t } = useI18n()
+  const safeMessage = message ?? t('status.ready')
+
   return (
     <footer className="statusbar">
-      <span className="statusbar__item" title={`파일: ${fileName}`}>
-        파일: {fileName}
+      <span className="statusbar__item statusbar__item--left" title={`${t('status.file')}: ${fileName}`}>
+        {t('status.file')}: {fileName}
       </span>
-      <span className="statusbar__item" title={`상태: ${statusText}`}>
-        상태: {statusText}
+      <span className="statusbar__item statusbar__item--center" title={`${t('statusbar.status')}: ${statusText}`}>
+        {t('statusbar.status')}: {statusText}
       </span>
-      <span className="statusbar__item" title={message ?? '준비됨'}>
-        {message ?? '준비됨'}
-      </span>
-      <span className="statusbar__item" title={`테마: ${themeMode} → ${resolvedTheme}`}>
-        테마: {themeMode} → {resolvedTheme}
+      <span className="statusbar__item statusbar__item--right" title={`${t('statusbar.message')}: ${safeMessage}`}>
+        {safeMessage}
       </span>
     </footer>
   )
 }
+

@@ -5,9 +5,25 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "core:window:allow-close",
+    "core:window:allow-destroy",
     "dialog:allow-open",
+    "dialog:allow-confirm",
     "dialog:allow-save",
     "fs:default",
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [{ "path": "**" }]
+    },
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [{ "path": "**" }]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [{ "path": "**" }]
+    },
+    "opener:allow-open-url",
     "opener:allow-default-urls",
     "opener:allow-open-path"
   ]

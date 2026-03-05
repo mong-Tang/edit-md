@@ -3,20 +3,7 @@ import type { FileService } from '../services/fileService'
 import type { FileDescriptor, OpenedFile } from '../types/file'
 
 const SAMPLE_NAME = 'untitled.md'
-const INITIAL_MARKDOWN = `# edit-md
-
-편향 없는 무료 Markdown 편집기를 목표로 하는 초기 프로토타입입니다.
-
-## 현재 지원
-- 실시간 프리뷰
-- 파일 열기/저장
-- 이미지와 링크 렌더링
-- 테마 선택: Light / Dark / System
-- HTML / PDF 내보내기
-
-## 시작 화면 링크
-[splashscreen.html](file:///D:/my_Work/workspace/edit-md/splashscreen.html)
-`
+const INITIAL_MARKDOWN = ''
 
 type DocumentTab = {
   id: string
@@ -24,6 +11,7 @@ type DocumentTab = {
   fileName: string
   isDirty: boolean
   markdown: string
+  savedMarkdown: string
 }
 
 function createTab(overrides?: Partial<DocumentTab>): DocumentTab {
@@ -33,17 +21,22 @@ function createTab(overrides?: Partial<DocumentTab>): DocumentTab {
     fileName: SAMPLE_NAME,
     isDirty: false,
     markdown: INITIAL_MARKDOWN,
+    savedMarkdown: INITIAL_MARKDOWN,
     ...overrides,
   }
 }
 
-function confirmDiscardIfDirty(isDirty: boolean) {
-  if (!isDirty) return true
-  return window.confirm('저장되지 않은 변경 사항이 있습니다. 계속 진행할까요?')
-}
-
 function isSameFile(a: FileDescriptor | null | undefined, b: FileDescriptor | null | undefined) {
   return !!a && !!b && a.backend === b.backend && a.name === b.name && a.path === b.path
+}
+
+function isPristineUntitledTab(tab: DocumentTab) {
+  return (
+    !tab.currentFile &&
+    !tab.isDirty &&
+    tab.fileName === SAMPLE_NAME &&
+    tab.markdown.trim().length === 0
+  )
 }
 
 export function useDocumentState(fileService: FileService) {
@@ -56,7 +49,7 @@ export function useDocumentState(fileService: FileService) {
   )
 
   const anyDirty = useMemo(() => tabs.some((tab) => tab.isDirty), [tabs])
-  const statusText = useMemo(() => (activeTab?.isDirty ? '수정됨' : '저장됨'), [activeTab])
+  const statusText = useMemo(() => (activeTab?.isDirty ? 'modified' : 'saved'), [activeTab])
 
   const setActiveTabPatch = (patch: Partial<DocumentTab>) => {
     if (!activeTab) return
@@ -75,6 +68,7 @@ export function useDocumentState(fileService: FileService) {
                 fileName: file.descriptor.name,
                 isDirty: false,
                 markdown: file.content,
+                savedMarkdown: file.content,
               }
             : tab,
         ),
@@ -83,11 +77,31 @@ export function useDocumentState(fileService: FileService) {
       return existing.id
     }
 
+    if (activeTab && isPristineUntitledTab(activeTab)) {
+      setTabs((current) =>
+        current.map((tab) =>
+          tab.id === activeTab.id
+            ? {
+                ...tab,
+                currentFile: file.descriptor,
+                fileName: file.descriptor.name,
+                isDirty: false,
+                markdown: file.content,
+                savedMarkdown: file.content,
+              }
+            : tab,
+        ),
+      )
+      setActiveTabId(activeTab.id)
+      return activeTab.id
+    }
+
     const nextTab = createTab({
       currentFile: file.descriptor,
       fileName: file.descriptor.name,
       isDirty: false,
       markdown: file.content,
+      savedMarkdown: file.content,
     })
 
     setTabs((current) => [...current, nextTab])
@@ -107,7 +121,7 @@ export function useDocumentState(fileService: FileService) {
           ? {
               ...tab,
               markdown: value,
-              isDirty: value !== tab.markdown ? true : tab.isDirty,
+              isDirty: value !== tab.savedMarkdown,
             }
           : tab,
       ),
@@ -134,7 +148,6 @@ export function useDocumentState(fileService: FileService) {
   const closeTab = (tabId: string) => {
     const tab = tabs.find((item) => item.id === tabId)
     if (!tab) return false
-    if (!confirmDiscardIfDirty(tab.isDirty)) return false
 
     if (tabs.length === 1) {
       const fresh = createTab()
@@ -161,7 +174,18 @@ export function useDocumentState(fileService: FileService) {
   }
 
   const markSaved = () => {
-    setActiveTabPatch({ isDirty: false })
+    if (!activeTab) return
+    setTabs((current) =>
+      current.map((tab) =>
+        tab.id === activeTab.id
+          ? {
+              ...tab,
+              isDirty: false,
+              savedMarkdown: tab.markdown,
+            }
+          : tab,
+      ),
+    )
   }
 
   return {

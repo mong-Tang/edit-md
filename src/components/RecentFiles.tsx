@@ -1,4 +1,5 @@
-﻿import type { RecentFileEntry } from '../types/recentFile'
+import { useI18n } from '../i18n'
+import type { RecentFileEntry } from '../types/recentFile'
 
 type RecentFilesProps = {
   onSelect: (file: RecentFileEntry) => void
@@ -6,12 +7,14 @@ type RecentFilesProps = {
 }
 
 export function RecentFiles({ onSelect, recentFiles }: RecentFilesProps) {
+  const { t } = useI18n()
+
   return (
     <section className="recent-files">
-      <strong className="recent-files__title">최근 파일</strong>
+      <strong className="recent-files__title">{t('menu.file.recent')}</strong>
 
       {recentFiles.length === 0 ? (
-        <span className="recent-files__empty">아직 기록이 없습니다.</span>
+        <span className="recent-files__empty">{t('menu.file.recent.empty')}</span>
       ) : (
         <div className="recent-files__list">
           {recentFiles.map((file) => (
@@ -31,3 +34,4 @@ export function RecentFiles({ onSelect, recentFiles }: RecentFilesProps) {
     </section>
   )
 }
+

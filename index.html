@@ -4,8 +4,244 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>edit-md | Markdown Desktop Prototype</title>
+    <script>
+      (() => {
+        const key = 'edit-md-theme'
+        const saved = window.localStorage.getItem(key)
+        const mode = saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system'
+        const resolved =
+          mode === 'system'
+            ? window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+            : mode
+        document.documentElement.dataset.theme = resolved
+      })()
+    </script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #0f172a;
+      }
+
+      body {
+        background: #0f172a;
+        color: #f8fafc;
+        font-family: 'Segoe UI', Arial, sans-serif;
+      }
+
+      #app {
+        width: 100%;
+        height: 100%;
+        visibility: hidden;
+      }
+
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        z-index: 2147483647;
+        background: radial-gradient(circle at top, #1e293b, #0f172a);
+        transition: opacity 180ms ease-out;
+      }
+
+      #boot-splash.boot-splash--hide {
+        opacity: 0;
+      }
+
+      .boot-splash__card {
+        width: min(420px, calc(100vw - 32px));
+        padding: 28px 30px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 18px;
+        background: rgba(15, 23, 42, 0.76);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+      }
+
+      .boot-splash__brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 18px;
+        font-size: 20px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .boot-splash__logo {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #f59e0b, #fb7185);
+        color: #111827;
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .boot-splash__title {
+        margin: 0 0 8px;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .boot-splash__desc {
+        margin: 0 0 10px;
+        color: #cbd5e1;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .boot-splash__label {
+        display: inline-block;
+        margin-right: 6px;
+        padding: 1px 8px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        border-radius: 999px;
+        color: #e2e8f0;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        background: rgba(30, 41, 59, 0.55);
+      }
+
+      .boot-splash__mdbox {
+        margin-top: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 12px;
+        overflow: hidden;
+        background: rgba(2, 6, 23, 0.62);
+      }
+
+      .boot-splash__mdhead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 7px 10px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        background: rgba(15, 23, 42, 0.78);
+        color: #94a3b8;
+        font-size: 12px;
+      }
+
+      .boot-splash__mdcode {
+        margin: 0;
+        padding: 10px 12px;
+        color: #e2e8f0;
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
+      }
+
+      .boot-splash__bar {
+        margin-top: 22px;
+        height: 6px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.16);
+      }
+
+      .boot-splash__bar::after {
+        content: '';
+        display: block;
+        width: 42%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #f59e0b, #fcd34d);
+        animation: boot-loading 1.15s ease-in-out infinite alternate;
+      }
+
+      @keyframes boot-loading {
+        from {
+          transform: translateX(-12%);
+        }
+        to {
+          transform: translateX(140%);
+        }
+      }
+
+      .boot-splash__statusbar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: center;
+        gap: 1rem;
+        height: 44px;
+        padding: 4px 2px;
+        border-top: 1px solid rgba(148, 163, 184, 0.22);
+        background: rgba(15, 23, 42, 0.92);
+        color: #94a3b8;
+        font-size: 0.9rem;
+      }
+
+      .boot-splash__statusitem {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .boot-splash__statusitem--left {
+        justify-self: start;
+      }
+
+      .boot-splash__statusitem--center {
+        justify-self: center;
+      }
+
+      .boot-splash__statusitem--right {
+        justify-self: end;
+      }
+    </style>
   </head>
   <body>
+    <div id="boot-splash" aria-label="앱 시작 화면">
+      <section class="boot-splash__card">
+        <div class="boot-splash__brand">
+          <div class="boot-splash__logo">md</div>
+          <div>마크다운 편집기</div>
+        </div>
+        <h1 class="boot-splash__title">Markdown(.md) 소개</h1>
+        <p class="boot-splash__desc">
+          <span class="boot-splash__label">본문</span>Markdown은 2004년 John Gruber와 Aaron Swartz가 제안한 경량 마크업 언어입니다.
+          복잡한 태그 대신 간단한 기호(#, -, *, [])로 문서를 작성하고, HTML로 쉽게 변환할 수 있습니다.
+        </p>
+        <p class="boot-splash__desc">
+          <span class="boot-splash__label">장점</span>문법이 직관적이고 일반 텍스트 기반이라 어떤 환경에서도 열기 쉽고,
+          Git 같은 버전관리와 궁합이 좋습니다.
+        </p>
+        <p class="boot-splash__desc">
+          <span class="boot-splash__label">단점</span>고급 레이아웃(정교한 페이지 구성, 복잡한 표/서식, 인쇄용 세밀 편집)에서는
+          표현력이 제한됩니다.
+        </p>
+        <div class="boot-splash__mdbox" aria-hidden="true">
+          <div class="boot-splash__mdhead">
+            <span>Markdown Example</span>
+            <span>```md</span>
+          </div>
+          <pre class="boot-splash__mdcode"># edit-md
+- 제목/목록/링크 문법 지원
+- 일반 텍스트 기반으로 버전관리 용이
+
+[공식 가이드](https://www.markdownguide.org)</pre>
+        </div>
+        <div class="boot-splash__bar" aria-hidden="true"></div>
+      </section>
+      <div class="boot-splash__statusbar" aria-hidden="true">
+        <span class="boot-splash__statusitem boot-splash__statusitem--left">파일: md 안내</span>
+        <span class="boot-splash__statusitem boot-splash__statusitem--center">상태: 준비 중</span>
+        <span class="boot-splash__statusitem boot-splash__statusitem--right">준비됨</span>
+      </div>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

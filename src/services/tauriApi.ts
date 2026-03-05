@@ -1,14 +1,43 @@
 import type { FileDescriptor, OpenedFile } from '../types/file'
+import { translateCurrent } from '../i18n'
 
 type DialogModule = typeof import('@tauri-apps/plugin-dialog')
 type FsModule = typeof import('@tauri-apps/plugin-fs')
+type DialogFilter = {
+  extensions: string[]
+  name: string
+}
 
-const MARKDOWN_FILTERS = [
-  {
-    extensions: ['md', 'markdown', 'txt'],
-    name: 'Markdown Files',
-  },
-]
+function getMarkdownFilters() {
+  return [
+    {
+      extensions: ['md', 'markdown', 'txt'],
+      name: translateCurrent('dialog.filter.markdownFiles'),
+    },
+  ] satisfies DialogFilter[]
+}
+
+function getMarkdownSaveFilters() {
+  return [
+    {
+      extensions: ['md'],
+      name: translateCurrent('dialog.filter.markdownMd'),
+    },
+    {
+      extensions: ['txt'],
+      name: translateCurrent('dialog.filter.textTxt'),
+    },
+  ] satisfies DialogFilter[]
+}
+
+function getPdfFilters() {
+  return [
+    {
+      extensions: ['pdf'],
+      name: translateCurrent('dialog.filter.pdfFiles'),
+    },
+  ] satisfies DialogFilter[]
+}
 
 function getFileNameFromPath(path: string) {
   const normalized = path.replaceAll('\\', '/')
@@ -35,9 +64,9 @@ async function loadFsModule(): Promise<FsModule> {
 export async function tauriOpenMarkdownFile(): Promise<OpenedFile | null> {
   const dialog = await loadDialogModule()
   const selected = await dialog.open({
-    filters: MARKDOWN_FILTERS,
+    filters: getMarkdownFilters(),
     multiple: false,
-    title: 'Markdown 파일 열기',
+    title: translateCurrent('dialog.title.openMarkdown'),
   })
 
   if (!selected || Array.isArray(selected)) {
@@ -67,8 +96,8 @@ export async function tauriSaveFileAs(defaultName: string, content: string): Pro
   const dialog = await loadDialogModule()
   const selected = await dialog.save({
     defaultPath: defaultName,
-    filters: MARKDOWN_FILTERS,
-    title: 'Markdown 파일 저장',
+    filters: getMarkdownSaveFilters(),
+    title: translateCurrent('dialog.title.saveMarkdown'),
   })
 
   if (!selected) {
@@ -77,6 +106,26 @@ export async function tauriSaveFileAs(defaultName: string, content: string): Pro
 
   const fs = await loadFsModule()
   await fs.writeTextFile(selected, content)
+  return createTauriDescriptor(selected)
+}
+
+export async function tauriSaveBinaryFileAs(
+  defaultName: string,
+  content: ArrayBuffer,
+): Promise<FileDescriptor | null> {
+  const dialog = await loadDialogModule()
+  const selected = await dialog.save({
+    defaultPath: defaultName,
+    filters: getPdfFilters(),
+    title: translateCurrent('dialog.title.savePdf'),
+  })
+
+  if (!selected) {
+    return null
+  }
+
+  const fs = await loadFsModule()
+  await fs.writeFile(selected, new Uint8Array(content))
   return createTauriDescriptor(selected)
 }
 
