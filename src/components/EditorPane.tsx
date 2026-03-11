@@ -272,11 +272,11 @@ export function EditorPane({ allowContextMenu = true, indentSize, markdown, onCh
           value={markdown}
           onKeyDown={(event) => {
             const triggerQuickInsert =
-              (event.key === '?' || (event.key === '/' && event.shiftKey)) &&
-              event.shiftKey &&
               event.ctrlKey &&
+              event.shiftKey &&
               !event.metaKey &&
-              !event.altKey
+              !event.altKey &&
+              (event.code === 'Slash' || event.key === '?')
 
             if (triggerQuickInsert) {
               event.preventDefault()

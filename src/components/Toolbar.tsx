@@ -11,7 +11,6 @@ type ToolbarProps = {
   onCopy: () => void
   onCut: () => void
   onExportHtml: () => void
-  onExportPdf: () => void
   onCloseFile: () => void
   onExit: () => void
   onNewFile: () => void
@@ -42,7 +41,6 @@ export function Toolbar({
   onCopy,
   onCut,
   onExportHtml,
-  onExportPdf,
   onCloseFile,
   onExit,
   onNewFile,
@@ -137,9 +135,6 @@ export function Toolbar({
               <div className="menu__separator" />
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onExportHtml)}>
                 {t('menu.file.exportHtml')}
-              </button>
-              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onExportPdf)}>
-                {t('menu.file.exportPdf')}
               </button>
               <div className="menu__separator" />
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onExit)}>

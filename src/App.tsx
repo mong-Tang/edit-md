@@ -1,10 +1,8 @@
 import { isTauri } from '@tauri-apps/api/core'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { AboutModal } from './components/AboutModal'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { DocumentTabs } from './components/DocumentTabs'
 import { EditorPane } from './components/EditorPane'
-import { PreviewPane } from './components/PreviewPane'
 import { StartScreen } from './components/StartScreen'
 import { StatusBar } from './components/StatusBar'
 import { Toolbar } from './components/Toolbar'
@@ -13,9 +11,18 @@ import { useDocumentState } from './hooks/useDocumentState'
 import { useRecentFiles } from './hooks/useRecentFiles'
 import { useTheme } from './hooks/useTheme'
 import { type MessageKey, useI18n } from './i18n'
-import { createHtmlDocument, createPdfBytesFromElement } from './lib/export'
 import { runtimeFileService } from './services/runtimeFileService'
 import type { RecentFileEntry } from './types/recentFile'
+
+const AboutModal = lazy(async () => {
+  const module = await import('./components/AboutModal')
+  return { default: module.AboutModal }
+})
+
+const PreviewPane = lazy(async () => {
+  const module = await import('./components/PreviewPane')
+  return { default: module.PreviewPane }
+})
 
 const DEFAULT_UPDATE_FEED_URL = 'https://raw.githubusercontent.com/mong-Tang/edit-md/main/update.json'
 const UPDATE_FEED_URL =
@@ -298,7 +305,8 @@ export function App() {
 
   const handleExportHtml = async () => {
     try {
-      const html = createHtmlDocument(fileName, markdown)
+      const { createHtmlDocument } = await import('./lib/export')
+      const html = await createHtmlDocument(fileName, markdown)
       const saved = await runtimeFileService.saveFileAs({
         content: html,
         currentFile: null,
@@ -315,33 +323,6 @@ export function App() {
     } catch (error) {
       console.error('[App] export html failed', { error })
       setStatus('status.exportHtml.failed')
-    }
-  }
-
-  const handleExportPdf = async () => {
-    const previewElement = window.document.querySelector('.preview.markdown-body') as HTMLElement | null
-    if (!previewElement) {
-      setStatus('status.exportPdf.targetMissing')
-      return
-    }
-
-    try {
-      const pdfContent = await createPdfBytesFromElement(previewElement)
-      const saved = await runtimeFileService.saveBinaryFileAs({
-        content: pdfContent,
-        mimeType: 'application/pdf',
-        name: fileName.replace(/\.md$/i, '') + '.pdf',
-      })
-
-      if (!saved) {
-        setStatus('status.exportPdf.cancelled')
-        return
-      }
-
-      setStatus('status.exportPdf.done', { name: saved.name })
-    } catch (error) {
-      console.error('[App] export pdf failed', { error })
-      setStatus('status.exportPdf.failed')
     }
   }
 
@@ -741,6 +722,12 @@ export function App() {
         return
       }
 
+      if (key === 'p' && isDesktopRuntime) {
+        event.preventDefault()
+        event.stopPropagation()
+        return
+      }
+
       if (key === 'w') {
         event.preventDefault()
         void handleCloseCurrentTab()
@@ -782,7 +769,6 @@ export function App() {
           void handleExit()
         }}
         onExportHtml={handleExportHtml}
-        onExportPdf={handleExportPdf}
         onNewFile={handleNewFile}
         onOpen={handleOpen}
         onOpenMongTangAi={handleOpenMongTangAi}
@@ -831,7 +817,16 @@ export function App() {
           </section>
         ) : (
           <>
-            <PreviewPane currentFilePath={currentFile?.path ?? null} markdown={markdown} />
+            <Suspense
+              fallback={
+                <section className="pane preview-pane">
+                  <div className="pane__header">{t('preview.header')}</div>
+                  <div className="preview" />
+                </section>
+              }
+            >
+              <PreviewPane currentFilePath={currentFile?.path ?? null} markdown={markdown} />
+            </Suspense>
             <EditorPane
               allowContextMenu={allowEditorContextMenu}
               indentSize={indentSize}
@@ -843,28 +838,30 @@ export function App() {
         )}
       </main>
 
-      <AboutModal
-        appVersion={aboutVersion}
-        customLines={aboutCustomLines}
-        customTitle={aboutCustomTitle}
-        isOpen={isAboutOpen}
-        onClose={handleCloseAboutModal}
-        onOpenExternal={(url) => {
-          void handleOpenExternalUrl(url)
-        }}
-        onPrimaryAction={
-          aboutPrimaryActionUrl
-            ? () => {
-                if (isTauri()) {
-                  void openUrl(aboutPrimaryActionUrl)
-                } else {
-                  window.open(aboutPrimaryActionUrl, '_blank', 'noopener,noreferrer')
+      <Suspense fallback={null}>
+        <AboutModal
+          appVersion={aboutVersion}
+          customLines={aboutCustomLines}
+          customTitle={aboutCustomTitle}
+          isOpen={isAboutOpen}
+          onClose={handleCloseAboutModal}
+          onOpenExternal={(url) => {
+            void handleOpenExternalUrl(url)
+          }}
+          onPrimaryAction={
+            aboutPrimaryActionUrl
+              ? () => {
+                  if (isTauri()) {
+                    void openUrl(aboutPrimaryActionUrl)
+                  } else {
+                    window.open(aboutPrimaryActionUrl, '_blank', 'noopener,noreferrer')
+                  }
                 }
-              }
-            : null
-        }
-        primaryActionLabel={aboutPrimaryActionLabel}
-      />
+              : null
+          }
+          primaryActionLabel={aboutPrimaryActionLabel}
+        />
+      </Suspense>
       {isNewFileModalOpen ? (
         <div className="modal-backdrop" role="presentation">
           <section className="newfile-modal" role="dialog" aria-modal="true" aria-label={t('newFileModal.title')}>
