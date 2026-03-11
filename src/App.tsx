@@ -722,7 +722,7 @@ export function App() {
         return
       }
 
-      if (key === 'p' && isDesktopRuntime) {
+      if (key === 'p') {
         event.preventDefault()
         event.stopPropagation()
         return
