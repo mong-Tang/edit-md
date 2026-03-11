@@ -21,7 +21,9 @@ const DEFAULT_UPDATE_FEED_URL = 'https://raw.githubusercontent.com/mong-Tang/edi
 const UPDATE_FEED_URL =
   (import.meta.env.VITE_UPDATE_FEED_URL as string | undefined)?.trim() || DEFAULT_UPDATE_FEED_URL
 const START_GUIDE_HIDDEN_KEY = 'edit-md.hide-start-guide'
+const INDENT_SIZE_KEY = 'edit-md.indent-size'
 const OPEN_FILES_EVENT = 'app://open-files'
+const DEFAULT_INDENT_SIZE: 2 | 4 | 8 = 2
 
 type UpdateFeed = {
   downloadUrl: string
@@ -32,6 +34,10 @@ type UpdateFeed = {
 type StatusState = {
   key: MessageKey
   params?: Record<string, string | number | undefined>
+}
+
+function normalizeLineEndings(value: string) {
+  return value.replace(/\r\n/g, '\n')
 }
 
 function compareVersions(a: string, b: string) {
@@ -56,10 +62,12 @@ function compareVersions(a: string, b: string) {
 
 export function App() {
   const { t } = useI18n()
+  const isDesktopRuntime = isTauri()
   const [statusMessage, setStatusMessage] = useState<StatusState>({ key: 'status.ready' })
   const [allowEditorContextMenu, setAllowEditorContextMenu] = useState(true)
   const [isStartScreen, setIsStartScreen] = useState(true)
   const [hideStartGuide, setHideStartGuide] = useState<boolean>(() => {
+    if (isTauri()) return false
     if (typeof window === 'undefined') return false
     try {
       return window.localStorage.getItem(START_GUIDE_HIDDEN_KEY) === '1'
@@ -67,7 +75,22 @@ export function App() {
       return false
     }
   })
+  const [indentSize, setIndentSize] = useState<2 | 4 | 8>(() => {
+    if (typeof window === 'undefined') return DEFAULT_INDENT_SIZE
+    try {
+      const raw = Number.parseInt(window.localStorage.getItem(INDENT_SIZE_KEY) ?? '', 10)
+      if (raw === 2 || raw === 4 || raw === 8) return raw
+      return DEFAULT_INDENT_SIZE
+    } catch {
+      return DEFAULT_INDENT_SIZE
+    }
+  })
   const [isAboutOpen, setIsAboutOpen] = useState(false)
+  const [isNewFileModalOpen, setIsNewFileModalOpen] = useState(false)
+  const [aboutCustomLines, setAboutCustomLines] = useState<string[] | null>(null)
+  const [aboutCustomTitle, setAboutCustomTitle] = useState<string | null>(null)
+  const [aboutPrimaryActionLabel, setAboutPrimaryActionLabel] = useState<string | null>(null)
+  const [aboutPrimaryActionUrl, setAboutPrimaryActionUrl] = useState<string | null>(null)
   const [aboutVersion, setAboutVersion] = useState('')
   const dirtyRef = useRef(false)
   const markdownRef = useRef('')
@@ -104,6 +127,12 @@ export function App() {
 
   const handleStartGuidePreference = useCallback(
     (next: boolean) => {
+      if (isDesktopRuntime) {
+        setHideStartGuide(false)
+        setStatus('status.startGuide.shown')
+        return
+      }
+
       setHideStartGuide(next)
       if (typeof window !== 'undefined') {
         try {
@@ -115,12 +144,34 @@ export function App() {
 
       setStatus(next ? 'status.startGuide.hidden' : 'status.startGuide.shown')
     },
+    [isDesktopRuntime, setStatus],
+  )
+
+  const handleIndentSizeChange = useCallback(
+    (next: 2 | 4 | 8) => {
+      setIndentSize(next)
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(INDENT_SIZE_KEY, String(next))
+        } catch {
+          // ignore
+        }
+      }
+      setStatus('status.indentSize.changed', { size: next })
+    },
     [setStatus],
   )
 
   useBeforeUnloadWarning(anyDirty)
   dirtyRef.current = anyDirty
   markdownRef.current = markdown
+
+  const hasPendingEditorValue = useCallback((baseline?: string) => {
+    if (!editorRef.current) return false
+    const currentValue = normalizeLineEndings(editorRef.current.value)
+    const compareBaseline = normalizeLineEndings(baseline ?? markdownRef.current)
+    return currentValue !== compareBaseline
+  }, [])
 
   const confirmDiscard = useCallback(
     async (message: string) => {
@@ -155,9 +206,8 @@ export function App() {
 
         const dispose = await appWindow.onCloseRequested(async (event) => {
           if (isClosingRef.current) return
-          const hasPendingEditorValue =
-            !!editorRef.current && editorRef.current.value !== markdownRef.current
-          if (!dirtyRef.current && !hasPendingEditorValue) return
+          const pendingEditorChange = hasPendingEditorValue()
+          if (!dirtyRef.current && !pendingEditorChange) return
 
           event.preventDefault()
           const discard = await confirmDiscard(t('dialog.exitConfirm'))
@@ -182,7 +232,7 @@ export function App() {
       disposed = true
       unlisten?.()
     }
-  }, [confirmDiscard, t])
+  }, [confirmDiscard, hasPendingEditorValue, t])
 
   const handleSave = async () => {
     try {
@@ -396,13 +446,34 @@ export function App() {
   }
 
   const handleNewFile = () => {
+    setIsNewFileModalOpen(true)
+  }
+
+  const handleCreateNewFile = (mode: 'blank' | 'template') => {
+    const templateContent = t('template.newFile.guide')
+    setIsNewFileModalOpen(false)
+
     if (isStartScreen) {
       setIsStartScreen(false)
+      if (mode === 'template') {
+        updateMarkdown(templateContent)
+        markSaved()
+        setStatus('status.new.templateLoaded')
+        return
+      }
+      updateMarkdown('')
+      markSaved()
       setStatus('status.new.started')
       return
     }
 
-    createNewDocument()
+    if (mode === 'template') {
+      createNewDocument({ markdown: templateContent })
+      setStatus('status.new.templateCreated')
+      return
+    }
+
+    createNewDocument({ markdown: '' })
     setStatus('status.new.created')
   }
 
@@ -410,12 +481,9 @@ export function App() {
     const targetTab = tabs.find((tab) => tab.id === tabId)
     if (!targetTab) return
 
-    const hasPendingEditorValue =
-      activeTabId === tabId &&
-      !!editorRef.current &&
-      editorRef.current.value !== targetTab.markdown
+    const pendingEditorChange = activeTabId === tabId && hasPendingEditorValue(targetTab.markdown)
 
-    if (targetTab.isDirty || hasPendingEditorValue) {
+    if (targetTab.isDirty || pendingEditorChange) {
       const discard = await confirmDiscard(t('dialog.tabDiscardConfirm', { name: targetTab.fileName }))
       if (!discard) {
         setStatus('status.tabClose.cancelled')
@@ -443,7 +511,8 @@ export function App() {
   }
 
   const handleExit = async () => {
-    if (anyDirty) {
+    const hasUnsaved = anyDirty || hasPendingEditorValue()
+    if (hasUnsaved) {
       const discard = await confirmDiscard(t('dialog.exitConfirm'))
       if (!discard) {
         setStatus('status.exit.cancelled')
@@ -536,6 +605,10 @@ export function App() {
 
   const handleShowVersionInfo = async () => {
     const version = await getCurrentVersion()
+    setAboutCustomTitle(null)
+    setAboutCustomLines(null)
+    setAboutPrimaryActionLabel(null)
+    setAboutPrimaryActionUrl(null)
     setAboutVersion(version)
     setIsAboutOpen(true)
     setStatus('status.version.current', { version })
@@ -543,61 +616,94 @@ export function App() {
 
   const handleCloseAboutModal = () => {
     setIsAboutOpen(false)
+    setAboutCustomTitle(null)
+    setAboutCustomLines(null)
+    setAboutPrimaryActionLabel(null)
+    setAboutPrimaryActionUrl(null)
   }
 
-  const handleCheckForUpdates = async () => {
+  const openUpdateResultModal = useCallback(
+    (lines: string[], options?: { actionLabel?: string; actionUrl?: string }) => {
+      setAboutCustomTitle(t('update.modal.title'))
+      setAboutCustomLines(lines)
+      setAboutPrimaryActionLabel(options?.actionLabel ?? null)
+      setAboutPrimaryActionUrl(options?.actionUrl ?? null)
+      setIsAboutOpen(true)
+    },
+    [t],
+  )
+
+  const handleCheckForUpdates = async (interactive = false) => {
     const currentVersion = await getCurrentVersion()
+    if (!interactive) {
+      setStatus('status.update.checking')
+    }
 
     if (!UPDATE_FEED_URL) {
-      setStatus('status.update.urlMissing', { version: currentVersion })
+      if (interactive) {
+        openUpdateResultModal([t('status.update.urlMissing', { version: currentVersion })])
+      } else {
+        setStatus('status.update.urlMissing', { version: currentVersion })
+      }
       return
     }
 
     try {
       const response = await fetch(UPDATE_FEED_URL, { cache: 'no-store' })
       if (!response.ok) {
-        setStatus('status.update.checkFailedCode', { code: response.status })
+        if (interactive) {
+          openUpdateResultModal([t('status.update.checkFailedCode', { code: response.status })])
+        } else {
+          setStatus('status.update.checkFailedCode', { code: response.status })
+        }
         return
       }
 
       const payload = (await response.json()) as Partial<UpdateFeed>
       if (!payload.version || !payload.downloadUrl) {
-        setStatus('status.update.invalidFormat')
+        if (interactive) {
+          openUpdateResultModal([t('status.update.invalidFormat')])
+        } else {
+          setStatus('status.update.invalidFormat')
+        }
         return
       }
 
       if (compareVersions(payload.version, currentVersion) <= 0) {
-        setStatus('status.update.latest', { version: currentVersion })
+        if (interactive) {
+          openUpdateResultModal([t('status.update.latest', { version: currentVersion })])
+        } else {
+          setStatus('status.update.latest', { version: currentVersion })
+        }
         return
       }
 
-      const goDownload = window.confirm(
-        t('dialog.update.newVersionConfirm', {
-          version: payload.version,
-          currentVersion,
-        }),
-      )
-
-      if (!goDownload) {
-        setStatus('status.update.newVersionAvailable', { version: payload.version })
-        return
-      }
-
-      if (isTauri()) {
-        await openUrl(payload.downloadUrl)
+      if (interactive) {
+        openUpdateResultModal(
+          [
+            t('status.update.newVersionAvailable', { version: payload.version }),
+            t('status.version.current', { version: currentVersion }),
+          ],
+          {
+            actionLabel: t('update.modal.openDownload'),
+            actionUrl: payload.downloadUrl,
+          },
+        )
       } else {
-        window.open(payload.downloadUrl, '_blank', 'noopener,noreferrer')
+        setStatus('status.update.newVersionAvailable', { version: payload.version })
       }
-
-      setStatus('status.update.opened', { version: payload.version })
     } catch (error) {
       console.error('[App] update check failed', { error })
-      setStatus('status.update.checkFailed')
+      if (interactive) {
+        openUpdateResultModal([t('status.update.checkFailed')])
+      } else {
+        setStatus('status.update.checkFailed')
+      }
     }
   }
 
   autoUpdateCheckRef.current = () => {
-    void handleCheckForUpdates()
+    void handleCheckForUpdates(false)
   }
 
   useEffect(() => {
@@ -663,8 +769,9 @@ export function App() {
     <div className="app-shell">
       <Toolbar
         allowEditorContextMenu={allowEditorContextMenu}
+        indentSize={indentSize}
         onCheckForUpdates={() => {
-          void handleCheckForUpdates()
+          void handleCheckForUpdates(true)
         }}
         onCopy={handleCopy}
         onCut={handleCut}
@@ -690,6 +797,7 @@ export function App() {
         onShowStartGuide={() => {
           handleStartGuidePreference(false)
         }}
+        onIndentSizeChange={handleIndentSizeChange}
         onSelectAll={handleSelectAll}
         onThemeChange={setThemeMode}
         onToggleEditorContextMenu={handleToggleEditorContextMenu}
@@ -714,7 +822,11 @@ export function App() {
           <section className="pane preview-pane">
             <div className="pane__header">{t('app.startPaneHeader')}</div>
             <div className="preview">
-              <StartScreen hideGuide={hideStartGuide} onHideGuideChange={handleStartGuidePreference} />
+              <StartScreen
+                canHideGuide={!isDesktopRuntime}
+                hideGuide={hideStartGuide}
+                onHideGuideChange={handleStartGuidePreference}
+              />
             </div>
           </section>
         ) : (
@@ -722,6 +834,7 @@ export function App() {
             <PreviewPane currentFilePath={currentFile?.path ?? null} markdown={markdown} />
             <EditorPane
               allowContextMenu={allowEditorContextMenu}
+              indentSize={indentSize}
               markdown={markdown}
               onChange={updateMarkdown}
               textareaRef={editorRef}
@@ -732,12 +845,63 @@ export function App() {
 
       <AboutModal
         appVersion={aboutVersion}
+        customLines={aboutCustomLines}
+        customTitle={aboutCustomTitle}
         isOpen={isAboutOpen}
         onClose={handleCloseAboutModal}
         onOpenExternal={(url) => {
           void handleOpenExternalUrl(url)
         }}
+        onPrimaryAction={
+          aboutPrimaryActionUrl
+            ? () => {
+                if (isTauri()) {
+                  void openUrl(aboutPrimaryActionUrl)
+                } else {
+                  window.open(aboutPrimaryActionUrl, '_blank', 'noopener,noreferrer')
+                }
+              }
+            : null
+        }
+        primaryActionLabel={aboutPrimaryActionLabel}
       />
+      {isNewFileModalOpen ? (
+        <div className="modal-backdrop" role="presentation">
+          <section className="newfile-modal" role="dialog" aria-modal="true" aria-label={t('newFileModal.title')}>
+            <h2 className="newfile-modal__title">{t('newFileModal.title')}</h2>
+            <p className="newfile-modal__desc">{t('newFileModal.description')}</p>
+            <div className="newfile-modal__actions">
+              <button
+                type="button"
+                className="newfile-modal__button"
+                onClick={() => {
+                  handleCreateNewFile('blank')
+                }}
+              >
+                {t('newFileModal.blank')}
+              </button>
+              <button
+                type="button"
+                className="newfile-modal__button newfile-modal__button--primary"
+                onClick={() => {
+                  handleCreateNewFile('template')
+                }}
+              >
+                {t('newFileModal.template')}
+              </button>
+              <button
+                type="button"
+                className="newfile-modal__button"
+                onClick={() => {
+                  setIsNewFileModalOpen(false)
+                }}
+              >
+                {t('newFileModal.cancel')}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       <StatusBar fileName={statusBarFileName} message={statusBarMessage} statusText={statusBarStatusText} />
     </div>
   )

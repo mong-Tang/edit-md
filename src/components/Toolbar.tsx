@@ -5,6 +5,7 @@ import type { ThemeMode } from '../types/theme'
 
 type ToolbarProps = {
   allowEditorContextMenu: boolean
+  indentSize: 2 | 4 | 8
   onCheckForUpdates: () => void
   onOpenMongTangAi: () => void
   onCopy: () => void
@@ -26,6 +27,7 @@ type ToolbarProps = {
   onToggleEditorContextMenu: () => void
   onShowStartGuide: () => void
   onThemeChange: (theme: ThemeMode) => void
+  onIndentSizeChange: (size: 2 | 4 | 8) => void
   onUndo: () => void
   themeMode: ThemeMode
 }
@@ -34,6 +36,7 @@ type MenuKey = 'edit' | 'file' | 'help' | 'view' | null
 
 export function Toolbar({
   allowEditorContextMenu,
+  indentSize,
   onCheckForUpdates,
   onOpenMongTangAi,
   onCopy,
@@ -55,6 +58,7 @@ export function Toolbar({
   onToggleEditorContextMenu,
   onShowStartGuide,
   onThemeChange,
+  onIndentSizeChange,
   onUndo,
   themeMode,
 }: ToolbarProps) {
@@ -284,6 +288,44 @@ export function Toolbar({
                   {locale === 'en' ? '✓' : ''}
                 </span>
                 <span>{t('menu.view.language.en')}</span>
+              </button>
+              <div className="menu__separator" />
+              <div className="menu__section-title">{t('menu.view.indent')}</div>
+              <button
+                type="button"
+                className="menu__item menu__item--toggle"
+                role="menuitemradio"
+                aria-checked={indentSize === 2}
+                onClick={() => runMenuAction(() => onIndentSizeChange(2))}
+              >
+                <span className="menu__check" aria-hidden="true">
+                  {indentSize === 2 ? '✓' : ''}
+                </span>
+                <span>{t('menu.view.indent.2')}</span>
+              </button>
+              <button
+                type="button"
+                className="menu__item menu__item--toggle"
+                role="menuitemradio"
+                aria-checked={indentSize === 4}
+                onClick={() => runMenuAction(() => onIndentSizeChange(4))}
+              >
+                <span className="menu__check" aria-hidden="true">
+                  {indentSize === 4 ? '✓' : ''}
+                </span>
+                <span>{t('menu.view.indent.4')}</span>
+              </button>
+              <button
+                type="button"
+                className="menu__item menu__item--toggle"
+                role="menuitemradio"
+                aria-checked={indentSize === 8}
+                onClick={() => runMenuAction(() => onIndentSizeChange(8))}
+              >
+                <span className="menu__check" aria-hidden="true">
+                  {indentSize === 8 ? '✓' : ''}
+                </span>
+                <span>{t('menu.view.indent.8')}</span>
               </button>
               <div className="menu__separator" />
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onShowStartGuide)}>

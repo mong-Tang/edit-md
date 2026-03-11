@@ -1,11 +1,12 @@
 import { useI18n } from '../i18n'
 
 type StartScreenProps = {
+  canHideGuide?: boolean
   hideGuide: boolean
   onHideGuideChange: (next: boolean) => void
 }
 
-export function StartScreen({ hideGuide, onHideGuideChange }: StartScreenProps) {
+export function StartScreen({ canHideGuide = true, hideGuide, onHideGuideChange }: StartScreenProps) {
   const { t } = useI18n()
 
   if (hideGuide) {
@@ -39,15 +40,17 @@ export function StartScreen({ hideGuide, onHideGuideChange }: StartScreenProps) 
           </div>
           <pre className="start-screen__mdcode">{t('start.exampleCode')}</pre>
         </div>
-        <label className="start-screen__optout">
-          <input
-            className="start-screen__optout-check"
-            type="checkbox"
-            checked={hideGuide}
-            onChange={(event) => onHideGuideChange(event.target.checked)}
-          />
-          <span>{t('start.hideGuideLabel')}</span>
-        </label>
+        {canHideGuide ? (
+          <label className="start-screen__optout">
+            <input
+              className="start-screen__optout-check"
+              type="checkbox"
+              checked={hideGuide}
+              onChange={(event) => onHideGuideChange(event.target.checked)}
+            />
+            <span>{t('start.hideGuideLabel')}</span>
+          </label>
+        ) : null}
         <div className="start-screen__bar" aria-hidden="true"></div>
       </div>
     </section>

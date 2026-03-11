@@ -435,6 +435,66 @@ button:hover {
   color: var(--text);
 }
 
+.editor-wrap {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+}
+
+.editor-quick-insert {
+  position: absolute;
+  z-index: 30;
+  width: min(310px, calc(100% - 24px));
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
+}
+
+.editor-quick-insert__title {
+  margin: 0 0 0.35rem;
+  padding: 0 0.3rem;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.editor-quick-insert__list {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.editor-quick-insert__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.4rem 0.52rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+}
+
+.editor-quick-insert__item:hover {
+  background: var(--panel-muted);
+}
+
+.editor-quick-insert__token {
+  min-width: 3rem;
+  color: var(--accent);
+  font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.editor-quick-insert__desc {
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
 .preview {
   overflow: auto;
   padding: 1rem 1.25rem 2rem;
@@ -756,6 +816,49 @@ button:hover {
   display: flex;
   justify-content: flex-end;
   margin-top: 1rem;
+}
+
+.newfile-modal {
+  width: min(460px, calc(100vw - 2rem));
+  padding: 1rem 1rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.newfile-modal__title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.newfile-modal__desc {
+  margin: 0 0 0.8rem;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.newfile-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.newfile-modal__button {
+  padding: 0.42rem 0.7rem;
+  border-radius: 8px;
+}
+
+.newfile-modal__button--primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.newfile-modal__button--primary:hover {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
 }
 
 @media (max-width: 900px) {

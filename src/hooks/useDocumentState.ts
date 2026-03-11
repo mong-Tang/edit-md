@@ -128,8 +128,13 @@ export function useDocumentState(fileService: FileService) {
     )
   }
 
-  const createNewDocument = () => {
-    const nextTab = createTab()
+  const createNewDocument = (options?: { markdown?: string }) => {
+    const initialMarkdown = options?.markdown ?? INITIAL_MARKDOWN
+    const nextTab = createTab({
+      isDirty: false,
+      markdown: initialMarkdown,
+      savedMarkdown: initialMarkdown,
+    })
     setTabs((current) => [...current, nextTab])
     setActiveTabId(nextTab.id)
   }
