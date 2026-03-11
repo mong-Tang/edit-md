@@ -1,146 +1,88 @@
-# edit-md
+﻿# edit-md
 
-Windows 전용 데스크톱 Markdown 에디터 프로젝트입니다.  
-목표는 특정 서비스에 종속되지 않는 **가볍고 무료인 Markdown 편집 경험**을 만드는 것입니다.
+`edit-md`는 Markdown 문서를 빠르게 작성하고 미리볼 수 있는 편집기입니다.
+하나의 코드베이스로 웹과 Windows 데스크톱 앱을 함께 운영합니다.
 
-## 소개
+## 사용 주소
 
-`edit-md`는 아래 방향을 기준으로 만들고 있습니다.
+- 웹: `https://mong-tang.github.io/edit-md/`
+- 앱 릴리스: `https://github.com/mong-Tang/edit-md/releases`
 
-- Windows 전용 데스크톱 앱
-- 로컬 파일 중심 편집
-- 실시간 미리보기
-- 가벼운 사용성
-- 특정 플랫폼 편향 최소화
+## 현재 운영 형태
 
-현재는 **React + Vite 기반 프로토타입** 상태이며,  
-이후 **Tauri 기반 Windows 데스크톱 앱**으로 연결할 예정입니다.
+### 웹
+- GitHub Pages로 배포
+- 브라우저에서 바로 접속 가능
+- 도움말 메뉴의 `업데이트 확인` 숨김
+- `Ctrl/Cmd + P` 인쇄 단축키 차단
 
-## 현재 지원 기능
+### 앱 (Windows)
+- Tauri 기반 데스크톱 앱
+- GitHub Release에서 설치 파일 제공
+- 도움말 메뉴의 `업데이트 확인` 유지
+- `Ctrl/Cmd + P` 인쇄 단축키 차단
+
+## 주요 기능
 
 - Markdown 편집
-- 실시간 프리뷰
-- 파일 열기
-- 파일 저장
-- 다른 이름으로 저장
-- 새 파일
-- 이미지 / 링크 렌더링
-- 테마 선택
-  - `Light`
-  - `Dark`
-  - `System`
+- 실시간 미리보기
+- 파일 열기 / 저장 / 다른 이름으로 저장
+- 최근 파일
 - HTML 내보내기
-- PDF 인쇄/내보내기
-- 최근 파일 기록 저장
-- 미저장 변경 경고
-- 코드 하이라이트
+- 다크 / 라이트 / 시스템 테마
+- 다국어 문자열 구조 적용
 
-## 현재 상태
+## 개발 환경 실행
 
-### 완료
-- UI 프로토타입 구성
-- 편집기 / 프리뷰 2단 레이아웃
-- 파일 서비스 추상화
-- 최근 파일 UI
-- 프리뷰 스타일 개선
-- Tauri 연동을 고려한 서비스 구조 설계
-- `src-tauri` 초기 템플릿 추가
-
-### 진행 중
-- Tauri 네이티브 파일 API 실제 연결
-- 최근 파일 재열기 고도화
-- Windows 데스크톱 앱 실행 검증
-
-### 아직 미완성
-- 실제 앱 메뉴(`파일`, `보기`, `내보내기`)
-- Windows 네이티브 단축키
-- 상대 경로 이미지 처리 개선
-- Rust/Tauri 실제 빌드 검증
-
-## 기술 스택
-
-### 현재
-- `React`
-- `TypeScript`
-- `Vite`
-- `react-markdown`
-- `remark-gfm`
-- `react-syntax-highlighter`
-
-### 목표
-- `Tauri + React + TypeScript`
-
-## 실행 방법
-
-### 개발 서버
 ```bash
 npm install
 npm run dev
 ```
 
-### 프로덕션 빌드
+개발 서버 기본 주소:
+
+```text
+http://localhost:5173
+```
+
+## 웹 빌드
+
 ```bash
 npm run build
+```
+
+## 앱 빌드
+
+```bash
+cmd.exe /c ".\\node_modules\\.bin\\tauri.cmd build"
+```
+
+대표 결과물:
+
+```text
+src-tauri\target\release\bundle\nsis\mongTang-md_0.1.2_x64-setup.exe
 ```
 
 ## 프로젝트 구조
 
 ```text
 edit-md/
-  src/
-    components/
-    hooks/
-    lib/
-    services/
-    types/
-  src-tauri/
+  src/                 # 공통 프론트엔드
+  src-tauri/           # Windows 앱 전용(Tauri)
+  public/              # 정적 파일
+  docs/                # 운영/배포 문서
 ```
 
-## 화면 구성
+## 운영 메모
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ Toolbar: 새 파일 | 열기 | 저장 | HTML | PDF | 테마 선택    │
-├─────────────────────────────────────────────────────────────┤
-│ Recent Files                                                │
-├───────────────────────────────┬─────────────────────────────┤
-│ Editor                        │ Preview                     │
-│ Markdown 입력                 │ 실시간 렌더링 결과          │
-├───────────────────────────────┴─────────────────────────────┤
-│ Status: 파일명 | 저장 상태 | 메시지 | 적용 테마            │
-└─────────────────────────────────────────────────────────────┘
-```
+- 웹과 앱은 레포를 분리하지 않고 함께 운영한다.
+- 웹 배포는 GitHub Pages를 사용한다.
+- 앱 배포는 GitHub Release + 설치 파일 업로드 방식으로 진행한다.
+- 버전은 웹/앱 공통으로 동일하게 관리한다.
 
-## Tauri 관련 상태
+## 관련 문서
 
-현재 저장소에는 아래가 준비되어 있습니다.
-
-- 프런트엔드 Tauri 서비스 뼈대
-- `@tauri-apps/plugin-dialog`
-- `@tauri-apps/plugin-fs`
-- `src-tauri/` 초기 템플릿
-
-아직 아래는 완료되지 않았습니다.
-
-- Rust/Cargo 설치 환경에서 실제 실행
-- Tauri 플러그인 실동작 검증
-- Windows 번들링 검증
-
-## 로드맵
-
-1. Rust / Cargo 환경 구성
-2. Tauri 실제 실행 검증
-3. 네이티브 파일 열기/저장 연결
-4. 최근 파일 재열기 완성
-5. 앱 메뉴/단축키 추가
-6. 내보내기 품질 개선
-
-## 작업 메모
-
-- GitHub 이슈 초안: [`docs/GITHUB_ISSUES.md`](./docs/GITHUB_ISSUES.md)
-- Tauri 설치/검증 체크리스트: [`docs/TAURI_SETUP.md`](./docs/TAURI_SETUP.md)
-
-## 참고
-
-- 현재 브라우저 프로토타입에서는 보안 제한 때문에 최근 파일 자동 재열기에 한계가 있습니다.
-- Tauri 연결 후 Windows 데스크톱 앱 기준 UX로 보완할 예정입니다.
+- 변경 이력: [`CHANGELOG.md`](./CHANGELOG.md)
+- 릴리스 가이드: [`docs/release/README.md`](./docs/release/README.md)
+- 릴리스 체크리스트: [`docs/release/checklist.md`](./docs/release/checklist.md)
+- Tauri 설정 참고: [`docs/TAURI_SETUP.md`](./docs/TAURI_SETUP.md)
