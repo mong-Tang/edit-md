@@ -1,3 +1,4 @@
+import { isTauri } from '@tauri-apps/api/core'
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import type { RecentFileEntry } from '../types/recentFile'
@@ -61,6 +62,7 @@ export function Toolbar({
   themeMode,
 }: ToolbarProps) {
   const { locale, setLocale, t } = useI18n()
+  const isDesktopRuntime = isTauri()
   const [openMenu, setOpenMenu] = useState<MenuKey>(null)
   const rootRef = useRef<HTMLElement | null>(null)
 
@@ -342,9 +344,11 @@ export function Toolbar({
           </button>
           {openMenu === 'help' ? (
             <div className="menu__dropdown" role="menu" aria-label={t('menu.help.aria')}>
-              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onCheckForUpdates)}>
-                {t('menu.help.checkUpdates')}
-              </button>
+              {isDesktopRuntime ? (
+                <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onCheckForUpdates)}>
+                  {t('menu.help.checkUpdates')}
+                </button>
+              ) : null}
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onShowVersionInfo)}>
                 {t('menu.help.versionInfo')}
               </button>
