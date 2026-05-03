@@ -71,10 +71,18 @@ type EditorPaneProps = {
   indentSize: number
   markdown: string
   onChange: (value: string) => void
+  onSelectionChange?: (hasSelection: boolean) => void
   textareaRef?: RefObject<HTMLTextAreaElement | null>
 }
 
-export function EditorPane({ allowContextMenu = true, indentSize, markdown, onChange, textareaRef }: EditorPaneProps) {
+export function EditorPane({
+  allowContextMenu = true,
+  indentSize,
+  markdown,
+  onChange,
+  onSelectionChange,
+  textareaRef,
+}: EditorPaneProps) {
   const { t } = useI18n()
   const indentText = ' '.repeat(indentSize)
   const popupRef = useRef<HTMLDivElement | null>(null)
@@ -292,8 +300,30 @@ export function EditorPane({ allowContextMenu = true, indentSize, markdown, onCh
             }
             handleTabIndent(event.currentTarget)
           }}
-          onSelect={(event) => rememberSelection(event.currentTarget)}
+          onSelect={(event) => {
+            const textarea = event.currentTarget
+            rememberSelection(textarea)
+            onSelectionChange?.(textarea.selectionStart !== textarea.selectionEnd)
+          }}
+          onPaste={(event) => {
+            const pastedText = event.clipboardData.getData('text')
+            if (!pastedText) return
+
+            event.preventDefault()
+            const textarea = event.currentTarget
+            const { selectionStart, selectionEnd, value } = textarea
+            const nextValue = value.slice(0, selectionStart) + pastedText + value.slice(selectionEnd)
+            const nextCursor = selectionStart + pastedText.length
+
+            onChange(nextValue)
+            
+            // 커서 위치 업데이트를 다음 프레임으로 예약
+            window.requestAnimationFrame(() => {
+              textarea.setSelectionRange(nextCursor, nextCursor)
+            })
+          }}
           onChange={(event) => onChange(event.target.value)}
+          wrap="off"
         />
         {isQuickInsertOpen ? (
           <div

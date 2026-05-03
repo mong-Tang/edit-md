@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { FileService } from '../services/fileService'
 import type { FileDescriptor, OpenedFile } from '../types/file'
 
@@ -12,16 +12,21 @@ type DocumentTab = {
   isDirty: boolean
   markdown: string
   savedMarkdown: string
+  history: string[]
+  currentIndex: number
 }
 
 function createTab(overrides?: Partial<DocumentTab>): DocumentTab {
+  const initialMarkdown = overrides?.markdown ?? INITIAL_MARKDOWN
   return {
     id: `tab-${crypto.randomUUID()}`,
     currentFile: null,
     fileName: SAMPLE_NAME,
     isDirty: false,
-    markdown: INITIAL_MARKDOWN,
-    savedMarkdown: INITIAL_MARKDOWN,
+    markdown: initialMarkdown,
+    savedMarkdown: initialMarkdown,
+    history: [initialMarkdown],
+    currentIndex: 0,
     ...overrides,
   }
 }
@@ -39,6 +44,8 @@ function isPristineUntitledTab(tab: DocumentTab) {
   )
 }
 
+const MAX_HISTORY = 100
+
 export function useDocumentState(fileService: FileService) {
   const [tabs, setTabs] = useState<DocumentTab[]>([createTab()])
   const [activeTabId, setActiveTabId] = useState<string>(() => tabs[0].id)
@@ -50,6 +57,9 @@ export function useDocumentState(fileService: FileService) {
 
   const anyDirty = useMemo(() => tabs.some((tab) => tab.isDirty), [tabs])
   const statusText = useMemo(() => (activeTab?.isDirty ? 'modified' : 'saved'), [activeTab])
+
+  const canUndo = activeTab.currentIndex > 0
+  const canRedo = activeTab.currentIndex < activeTab.history.length - 1
 
   const setActiveTabPatch = (patch: Partial<DocumentTab>) => {
     if (!activeTab) return
@@ -69,6 +79,8 @@ export function useDocumentState(fileService: FileService) {
                 isDirty: false,
                 markdown: file.content,
                 savedMarkdown: file.content,
+                history: [file.content],
+                currentIndex: 0,
               }
             : tab,
         ),
@@ -88,6 +100,8 @@ export function useDocumentState(fileService: FileService) {
                 isDirty: false,
                 markdown: file.content,
                 savedMarkdown: file.content,
+                history: [file.content],
+                currentIndex: 0,
               }
             : tab,
         ),
@@ -102,6 +116,8 @@ export function useDocumentState(fileService: FileService) {
       isDirty: false,
       markdown: file.content,
       savedMarkdown: file.content,
+      history: [file.content],
+      currentIndex: 0,
     })
 
     setTabs((current) => [...current, nextTab])
@@ -116,15 +132,62 @@ export function useDocumentState(fileService: FileService) {
   const updateMarkdown = (value: string) => {
     if (!activeTab) return
     setTabs((current) =>
-      current.map((tab) =>
-        tab.id === activeTab.id
-          ? {
-              ...tab,
-              markdown: value,
-              isDirty: value !== tab.savedMarkdown,
-            }
-          : tab,
-      ),
+      current.map((tab) => {
+        if (tab.id !== activeTab.id) return tab
+
+        // 히스토리 관리 (단순화를 위해 매번 저장하되, 이전과 다를 때만 저장)
+        let nextHistory = tab.history.slice(0, tab.currentIndex + 1)
+        let nextIndex = tab.currentIndex
+
+        if (nextHistory[nextIndex] !== value) {
+          nextHistory.push(value)
+          if (nextHistory.length > MAX_HISTORY) {
+            nextHistory.shift()
+          } else {
+            nextIndex += 1
+          }
+        }
+
+        return {
+          ...tab,
+          markdown: value,
+          isDirty: value !== tab.savedMarkdown,
+          history: nextHistory,
+          currentIndex: nextIndex,
+        }
+      }),
+    )
+  }
+
+  const undo = () => {
+    if (!canUndo) return
+    setTabs((current) =>
+      current.map((tab) => {
+        if (tab.id !== activeTabId) return tab
+        const nextIndex = tab.currentIndex - 1
+        return {
+          ...tab,
+          currentIndex: nextIndex,
+          markdown: tab.history[nextIndex],
+          isDirty: tab.history[nextIndex] !== tab.savedMarkdown,
+        }
+      }),
+    )
+  }
+
+  const redo = () => {
+    if (!canRedo) return
+    setTabs((current) =>
+      current.map((tab) => {
+        if (tab.id !== activeTabId) return tab
+        const nextIndex = tab.currentIndex + 1
+        return {
+          ...tab,
+          currentIndex: nextIndex,
+          markdown: tab.history[nextIndex],
+          isDirty: tab.history[nextIndex] !== tab.savedMarkdown,
+        }
+      }),
     )
   }
 
@@ -134,6 +197,8 @@ export function useDocumentState(fileService: FileService) {
       isDirty: false,
       markdown: initialMarkdown,
       savedMarkdown: initialMarkdown,
+      history: [initialMarkdown],
+      currentIndex: 0,
     })
     setTabs((current) => [...current, nextTab])
     setActiveTabId(nextTab.id)
@@ -198,6 +263,8 @@ export function useDocumentState(fileService: FileService) {
     activateTab,
     anyDirty,
     applyOpenedFile,
+    canRedo,
+    canUndo,
     closeTab,
     currentFile: activeTab?.currentFile ?? null,
     createNewDocument,
@@ -206,9 +273,11 @@ export function useDocumentState(fileService: FileService) {
     markdown: activeTab?.markdown ?? INITIAL_MARKDOWN,
     markSaved,
     openPicker,
+    redo,
     renameFile,
     statusText,
     tabs,
+    undo,
     updateCurrentFile,
     updateMarkdown,
   }

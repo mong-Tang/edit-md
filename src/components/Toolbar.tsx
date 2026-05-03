@@ -1,11 +1,41 @@
+import {
+  FilePlus,
+  FolderOpen,
+  Save,
+  X,
+  FileOutput,
+  LogOut,
+  Undo,
+  Redo,
+  Scissors,
+  Copy,
+  Clipboard,
+  MousePointerClick,
+  Sun,
+  Moon,
+  Monitor,
+  CheckCircle,
+  Languages,
+  ArrowRightToLine,
+  BookOpen,
+  RefreshCw,
+  Info,
+  Clock,
+  Smile,
+  Type,
+} from 'lucide-react'
 import { isTauri } from '@tauri-apps/api/core'
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
+import { truncateFileName } from '../lib/string'
 import type { RecentFileEntry } from '../types/recentFile'
 import type { ThemeMode } from '../types/theme'
 
 type ToolbarProps = {
   allowEditorContextMenu: boolean
+  canRedo: boolean
+  canUndo: boolean
+  hasOpenFiles: boolean
   indentSize: 2 | 4 | 8
   onCheckForUpdates: () => void
   onOpenMongTangAi: () => void
@@ -29,6 +59,9 @@ type ToolbarProps = {
   onThemeChange: (theme: ThemeMode) => void
   onIndentSizeChange: (size: 2 | 4 | 8) => void
   onUndo: () => void
+  hideStartGuide: boolean
+  hasSelection: boolean
+  canPaste: boolean
   themeMode: ThemeMode
 }
 
@@ -36,6 +69,9 @@ type MenuKey = 'edit' | 'file' | 'help' | 'view' | null
 
 export function Toolbar({
   allowEditorContextMenu,
+  canRedo,
+  canUndo,
+  hasOpenFiles,
   indentSize,
   onCheckForUpdates,
   onOpenMongTangAi,
@@ -59,6 +95,9 @@ export function Toolbar({
   onThemeChange,
   onIndentSizeChange,
   onUndo,
+  hideStartGuide,
+  hasSelection,
+  canPaste,
   themeMode,
 }: ToolbarProps) {
   const { locale, setLocale, t } = useI18n()
@@ -112,35 +151,69 @@ export function Toolbar({
             aria-expanded={openMenu === 'file'}
             aria-haspopup="true"
             onClick={() => toggleMenu('file')}
+            onMouseEnter={() => {
+              if (openMenu) setOpenMenu('file')
+            }}
           >
             {t('menu.file')}
           </button>
           {openMenu === 'file' ? (
             <div className="menu__dropdown" role="menu" aria-label={t('menu.file.aria')}>
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onNewFile)}>
-                {t('menu.file.new')}
+                <FilePlus size={16} aria-hidden="true" />
+                <span>{t('menu.file.new')}</span>
               </button>
               <div className="menu__separator" />
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onOpen)}>
-                {t('menu.file.open')}
+                <FolderOpen size={16} aria-hidden="true" />
+                <span>{t('menu.file.open')}</span>
               </button>
-              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onSave)}>
-                {t('menu.file.save')}
+              <button
+                type="button"
+                className="menu__item"
+                disabled={!hasOpenFiles}
+                role="menuitem"
+                onClick={() => runMenuAction(onSave)}
+              >
+                <Save size={16} aria-hidden="true" />
+                <span>{t('menu.file.save')}</span>
               </button>
-              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onSaveAs)}>
-                {t('menu.file.saveAs')}
+              <button
+                type="button"
+                className="menu__item"
+                disabled={!hasOpenFiles}
+                role="menuitem"
+                onClick={() => runMenuAction(onSaveAs)}
+              >
+                <Save size={16} aria-hidden="true" />
+                <span>{t('menu.file.saveAs')}</span>
               </button>
               <div className="menu__separator" />
-              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onCloseFile)}>
-                {t('menu.file.close')}
+              <button
+                type="button"
+                className="menu__item"
+                disabled={!hasOpenFiles}
+                role="menuitem"
+                onClick={() => runMenuAction(onCloseFile)}
+              >
+                <X size={16} aria-hidden="true" />
+                <span>{t('menu.file.close')}</span>
               </button>
               <div className="menu__separator" />
-              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onExportHtml)}>
-                {t('menu.file.exportHtml')}
+              <button
+                type="button"
+                className="menu__item"
+                disabled={!hasOpenFiles}
+                role="menuitem"
+                onClick={() => runMenuAction(onExportHtml)}
+              >
+                <FileOutput size={16} aria-hidden="true" />
+                <span>{t('menu.file.exportHtml')}</span>
               </button>
               <div className="menu__separator" />
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onExit)}>
-                {t('menu.file.exit')}
+                <LogOut size={16} aria-hidden="true" />
+                <span>{t('menu.file.exit')}</span>
               </button>
               <div className="menu__separator" />
               <div className="menu__section-title">{t('menu.file.recent')}</div>
@@ -156,7 +229,10 @@ export function Toolbar({
                     title={getRecentTooltip(file)}
                     onClick={() => runMenuAction(() => onRecentFileSelect(file))}
                   >
-                    <span className="menu__recent-name">{file.name}</span>
+                    <div className="menu__recent-info">
+                      <Clock size={14} aria-hidden="true" />
+                      <span className="menu__recent-name">{truncateFileName(file.name, 28)}</span>
+                    </div>
                   </button>
                 ))
               )}
@@ -171,29 +247,106 @@ export function Toolbar({
             aria-expanded={openMenu === 'edit'}
             aria-haspopup="true"
             onClick={() => toggleMenu('edit')}
+            onMouseEnter={() => {
+              if (openMenu) setOpenMenu('edit')
+            }}
           >
             {t('menu.edit')}
           </button>
           {openMenu === 'edit' ? (
             <div className="menu__dropdown" role="menu" aria-label={t('menu.edit.aria')}>
-              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onUndo)}>
-                {t('menu.edit.undo')}
-              </button>
-              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onRedo)}>
-                {t('menu.edit.redo')}
+              <button
+                type="button"
+                className="menu__item"
+                role="menuitem"
+                onClick={() => {
+                  // Emoji picker placeholder
+                }}
+              >
+                <Smile size={16} aria-hidden="true" />
+                <span className="menu__item-text">{t('menu.edit.emoji')}</span>
+                <span className="menu__item-shortcut">Win+.</span>
               </button>
               <div className="menu__separator" />
-              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onCut)}>
-                {t('menu.edit.cut')}
+              <button
+                type="button"
+                className="menu__item"
+                disabled={!canUndo}
+                role="menuitem"
+                onClick={() => runMenuAction(onUndo)}
+              >
+                <Undo size={16} aria-hidden="true" />
+                <span className="menu__item-text">{t('menu.edit.undo')}</span>
+                <span className="menu__item-shortcut">Ctrl+Z</span>
               </button>
-              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onCopy)}>
-                {t('menu.edit.copy')}
+              <button
+                type="button"
+                className="menu__item"
+                role="menuitem"
+                disabled={!canRedo}
+                onClick={() => runMenuAction(onRedo)}
+              >
+                <Redo size={16} aria-hidden="true" />
+                <span className="menu__item-text">{t('menu.edit.redo')}</span>
+                <span className="menu__item-shortcut">Ctrl+Y</span>
               </button>
-              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onPaste)}>
-                {t('menu.edit.paste')}
+              <div className="menu__separator" />
+              <button
+                type="button"
+                className="menu__item"
+                disabled={!hasSelection}
+                role="menuitem"
+                onClick={() => runMenuAction(onCut)}
+              >
+                <Scissors size={16} aria-hidden="true" />
+                <span className="menu__item-text">{t('menu.edit.cut')}</span>
+                <span className="menu__item-shortcut">Ctrl+X</span>
               </button>
-              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onSelectAll)}>
-                {t('menu.edit.selectAll')}
+              <button
+                type="button"
+                className="menu__item"
+                disabled={!hasSelection}
+                role="menuitem"
+                onClick={() => runMenuAction(onCopy)}
+              >
+                <Copy size={16} aria-hidden="true" />
+                <span className="menu__item-text">{t('menu.edit.copy')}</span>
+                <span className="menu__item-shortcut">Ctrl+C</span>
+              </button>
+              <button
+                type="button"
+                className="menu__item"
+                disabled={!canPaste}
+                role="menuitem"
+                title={t('menu.edit.paste')}
+                onClick={() => runMenuAction(onPaste)}
+              >
+                <Clipboard size={16} aria-hidden="true" />
+                <span className="menu__item-text">{t('menu.edit.paste')}</span>
+                <span className="menu__item-shortcut">Ctrl+V</span>
+              </button>
+              <button
+                type="button"
+                className="menu__item"
+                disabled={!canPaste}
+                role="menuitem"
+                title={t('menu.edit.pastePlain.desc')}
+                onClick={() => runMenuAction(onPaste)}
+              >
+                <Type size={16} aria-hidden="true" />
+                <span className="menu__item-text">{t('menu.edit.pastePlain')}</span>
+                <span className="menu__item-shortcut">Ctrl+Shift+V</span>
+              </button>
+              <div className="menu__separator" />
+              <button
+                type="button"
+                className="menu__item"
+                disabled={!hasOpenFiles}
+                role="menuitem"
+                onClick={() => runMenuAction(onSelectAll)}
+              >
+                <MousePointerClick size={16} aria-hidden="true" />
+                <span>{t('menu.edit.selectAll')}</span>
               </button>
             </div>
           ) : null}
@@ -206,6 +359,9 @@ export function Toolbar({
             aria-expanded={openMenu === 'view'}
             aria-haspopup="true"
             onClick={() => toggleMenu('view')}
+            onMouseEnter={() => {
+              if (openMenu) setOpenMenu('view')
+            }}
           >
             {t('menu.view')}
           </button>
@@ -218,10 +374,11 @@ export function Toolbar({
                 aria-checked={themeMode === 'light'}
                 onClick={() => runMenuAction(() => onThemeChange('light'))}
               >
-                <span className="menu__check" aria-hidden="true">
-                  {themeMode === 'light' ? '✓' : ''}
-                </span>
+                <Sun size={16} aria-hidden="true" />
                 <span>{t('menu.view.theme.light')}</span>
+                <span className="menu__check-mark" aria-hidden="true">
+                  {themeMode === 'light' ? <CheckCircle size={14} /> : null}
+                </span>
               </button>
               <button
                 type="button"
@@ -230,10 +387,11 @@ export function Toolbar({
                 aria-checked={themeMode === 'dark'}
                 onClick={() => runMenuAction(() => onThemeChange('dark'))}
               >
-                <span className="menu__check" aria-hidden="true">
-                  {themeMode === 'dark' ? '✓' : ''}
-                </span>
+                <Moon size={16} aria-hidden="true" />
                 <span>{t('menu.view.theme.dark')}</span>
+                <span className="menu__check-mark" aria-hidden="true">
+                  {themeMode === 'dark' ? <CheckCircle size={14} /> : null}
+                </span>
               </button>
               <button
                 type="button"
@@ -242,10 +400,11 @@ export function Toolbar({
                 aria-checked={themeMode === 'system'}
                 onClick={() => runMenuAction(() => onThemeChange('system'))}
               >
-                <span className="menu__check" aria-hidden="true">
-                  {themeMode === 'system' ? '✓' : ''}
-                </span>
+                <Monitor size={16} aria-hidden="true" />
                 <span>{t('menu.view.theme.system')}</span>
+                <span className="menu__check-mark" aria-hidden="true">
+                  {themeMode === 'system' ? <CheckCircle size={14} /> : null}
+                </span>
               </button>
               <div className="menu__separator" />
               <button
@@ -255,10 +414,11 @@ export function Toolbar({
                 aria-checked={allowEditorContextMenu}
                 onClick={() => runMenuAction(onToggleEditorContextMenu)}
               >
-                <span className="menu__check" aria-hidden="true">
-                  {allowEditorContextMenu ? '✓' : ''}
-                </span>
+                <MousePointerClick size={16} aria-hidden="true" />
                 <span>{t('menu.view.contextMenu')}</span>
+                <span className="menu__check-mark" aria-hidden="true">
+                  {allowEditorContextMenu ? <CheckCircle size={14} /> : null}
+                </span>
               </button>
               <div className="menu__separator" />
               <div className="menu__section-title">{t('menu.view.language')}</div>
@@ -269,10 +429,11 @@ export function Toolbar({
                 aria-checked={locale === 'ko'}
                 onClick={() => runMenuAction(() => setLocale('ko'))}
               >
-                <span className="menu__check" aria-hidden="true">
-                  {locale === 'ko' ? '✓' : ''}
-                </span>
+                <Languages size={16} aria-hidden="true" />
                 <span>{t('menu.view.language.ko')}</span>
+                <span className="menu__check-mark" aria-hidden="true">
+                  {locale === 'ko' ? <CheckCircle size={14} /> : null}
+                </span>
               </button>
               <button
                 type="button"
@@ -281,10 +442,11 @@ export function Toolbar({
                 aria-checked={locale === 'en'}
                 onClick={() => runMenuAction(() => setLocale('en'))}
               >
-                <span className="menu__check" aria-hidden="true">
-                  {locale === 'en' ? '✓' : ''}
-                </span>
+                <Languages size={16} aria-hidden="true" />
                 <span>{t('menu.view.language.en')}</span>
+                <span className="menu__check-mark" aria-hidden="true">
+                  {locale === 'en' ? <CheckCircle size={14} /> : null}
+                </span>
               </button>
               <div className="menu__separator" />
               <div className="menu__section-title">{t('menu.view.indent')}</div>
@@ -295,10 +457,11 @@ export function Toolbar({
                 aria-checked={indentSize === 2}
                 onClick={() => runMenuAction(() => onIndentSizeChange(2))}
               >
-                <span className="menu__check" aria-hidden="true">
-                  {indentSize === 2 ? '✓' : ''}
-                </span>
+                <ArrowRightToLine size={16} aria-hidden="true" />
                 <span>{t('menu.view.indent.2')}</span>
+                <span className="menu__check-mark" aria-hidden="true">
+                  {indentSize === 2 ? <CheckCircle size={14} /> : null}
+                </span>
               </button>
               <button
                 type="button"
@@ -307,10 +470,11 @@ export function Toolbar({
                 aria-checked={indentSize === 4}
                 onClick={() => runMenuAction(() => onIndentSizeChange(4))}
               >
-                <span className="menu__check" aria-hidden="true">
-                  {indentSize === 4 ? '✓' : ''}
-                </span>
+                <ArrowRightToLine size={16} aria-hidden="true" />
                 <span>{t('menu.view.indent.4')}</span>
+                <span className="menu__check-mark" aria-hidden="true">
+                  {indentSize === 4 ? <CheckCircle size={14} /> : null}
+                </span>
               </button>
               <button
                 type="button"
@@ -319,14 +483,25 @@ export function Toolbar({
                 aria-checked={indentSize === 8}
                 onClick={() => runMenuAction(() => onIndentSizeChange(8))}
               >
-                <span className="menu__check" aria-hidden="true">
-                  {indentSize === 8 ? '✓' : ''}
-                </span>
+                <ArrowRightToLine size={16} aria-hidden="true" />
                 <span>{t('menu.view.indent.8')}</span>
+                <span className="menu__check-mark" aria-hidden="true">
+                  {indentSize === 8 ? <CheckCircle size={14} /> : null}
+                </span>
               </button>
               <div className="menu__separator" />
-              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onShowStartGuide)}>
-                {t('menu.view.showStartGuide')}
+              <button
+                type="button"
+                className="menu__item menu__item--toggle"
+                role="menuitemcheckbox"
+                aria-checked={!hideStartGuide}
+                onClick={() => runMenuAction(onShowStartGuide)}
+              >
+                <BookOpen size={16} aria-hidden="true" />
+                <span>{hideStartGuide ? t('menu.view.startGuide.show') : t('menu.view.startGuide.hide')}</span>
+                <span className="menu__check-mark" aria-hidden="true">
+                  {!hideStartGuide ? <CheckCircle size={14} /> : null}
+                </span>
               </button>
             </div>
           ) : null}
@@ -339,27 +514,38 @@ export function Toolbar({
             aria-expanded={openMenu === 'help'}
             aria-haspopup="true"
             onClick={() => toggleMenu('help')}
+            onMouseEnter={() => {
+              if (openMenu) setOpenMenu('help')
+            }}
           >
             {t('menu.help')}
           </button>
           {openMenu === 'help' ? (
             <div className="menu__dropdown" role="menu" aria-label={t('menu.help.aria')}>
+              <button
+                type="button"
+                className="menu__item"
+                role="menuitem"
+                onClick={() => runMenuAction(onOpenMongTangAi)}
+              >
+                <RefreshCw size={16} aria-hidden="true" />
+                <span>{t('toolbar.link.mongTang')}</span>
+              </button>
+              <div className="menu__separator" />
               {isDesktopRuntime ? (
                 <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onCheckForUpdates)}>
-                  {t('menu.help.checkUpdates')}
+                  <RefreshCw size={16} aria-hidden="true" />
+                  <span>{t('menu.help.checkUpdates')}</span>
                 </button>
               ) : null}
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onShowVersionInfo)}>
-                {t('menu.help.versionInfo')}
+                <Info size={16} aria-hidden="true" />
+                <span>{t('menu.help.versionInfo')}</span>
               </button>
             </div>
           ) : null}
         </div>
       </div>
-
-      <button type="button" className="toolbar__link" title="https://mongtang-ai.vercel.app" onClick={onOpenMongTangAi}>
-        {t('toolbar.link.mongTang')}
-      </button>
     </header>
   )
 }

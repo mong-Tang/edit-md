@@ -40,17 +40,6 @@ export function StartScreen({ canHideGuide = true, hideGuide, onHideGuideChange 
           </div>
           <pre className="start-screen__mdcode">{t('start.exampleCode')}</pre>
         </div>
-        {canHideGuide ? (
-          <label className="start-screen__optout">
-            <input
-              className="start-screen__optout-check"
-              type="checkbox"
-              checked={hideGuide}
-              onChange={(event) => onHideGuideChange(event.target.checked)}
-            />
-            <span>{t('start.hideGuideLabel')}</span>
-          </label>
-        ) : null}
         <div className="start-screen__bar" aria-hidden="true"></div>
       </div>
     </section>

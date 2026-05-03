@@ -9,6 +9,7 @@ import { useI18n } from '../i18n'
 type PreviewPaneProps = {
   currentFilePath?: string | null
   markdown: string
+  previewRef?: React.RefObject<HTMLDivElement | null>
 }
 
 const EXTERNAL_PROTOCOLS = ['http://', 'https://', 'mailto:', 'tel:']
@@ -59,7 +60,7 @@ function resolveLocalPath(href: string, currentFilePath?: string | null) {
   return null
 }
 
-export function PreviewPane({ currentFilePath, markdown }: PreviewPaneProps) {
+export function PreviewPane({ currentFilePath, markdown, previewRef }: PreviewPaneProps) {
   const { t } = useI18n()
 
   const openInBrowser = (href: string) => {
@@ -126,7 +127,7 @@ export function PreviewPane({ currentFilePath, markdown }: PreviewPaneProps) {
   return (
     <section className="pane preview-pane">
       <div className="pane__header">{t('preview.header')}</div>
-      <div className="preview markdown-body">
+      <div className="preview markdown-body" ref={previewRef}>
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{

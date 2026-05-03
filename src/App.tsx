@@ -6,6 +6,7 @@ import { EditorPane } from './components/EditorPane'
 import { StartScreen } from './components/StartScreen'
 import { StatusBar } from './components/StatusBar'
 import { Toolbar } from './components/Toolbar'
+import { ContextMenu } from './components/ContextMenu'
 import { useBeforeUnloadWarning } from './hooks/useBeforeUnloadWarning'
 import { useDocumentState } from './hooks/useDocumentState'
 import { useRecentFiles } from './hooks/useRecentFiles'
@@ -103,6 +104,7 @@ export function App() {
   const markdownRef = useRef('')
   const isClosingRef = useRef(false)
   const editorRef = useRef<HTMLTextAreaElement>(null)
+  const previewRef = useRef<HTMLDivElement>(null)
   const autoUpdateCheckRef = useRef<() => void>(() => {})
   const { themeMode, setThemeMode } = useTheme()
   const { addRecentFile, recentFiles, removeRecentFile } = useRecentFiles()
@@ -111,6 +113,8 @@ export function App() {
     activateTab,
     anyDirty,
     applyOpenedFile,
+    canRedo,
+    canUndo,
     closeTab,
     createNewDocument,
     currentFile,
@@ -118,9 +122,11 @@ export function App() {
     markdown,
     markSaved,
     openPicker,
+    redo,
     renameFile,
     statusText,
     tabs,
+    undo,
     updateCurrentFile,
     updateMarkdown,
   } = useDocumentState(runtimeFileService)
@@ -132,14 +138,50 @@ export function App() {
     [],
   )
 
+  const [hasSelection, setHasSelection] = useState(false)
+  const [canPaste, setCanPaste] = useState(false)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+
+  const checkClipboard = useCallback(async () => {
+    // 브라우저 환경에서는 사전 읽기 시 보안 팝업이 뜨므로 항상 true로 설정하여 팝업을 방지합니다.
+    if (typeof window !== 'undefined' && !isTauri()) {
+      setCanPaste(true)
+      return
+    }
+
+    try {
+      const text = await navigator.clipboard.readText()
+      setCanPaste(text.length > 0)
+    } catch {
+      setCanPaste(true)
+    }
+  }, [])
+
+  const handleGlobalContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    
+    if (isTauri()) {
+      // 데스크톱 앱에서는 클립보드 체크 후 메뉴 표시
+      void checkClipboard().then(() => {
+        setContextMenu({ x: e.clientX, y: e.clientY })
+      })
+    } else {
+      // 브라우저에서는 체크 없이 즉시 메뉴 표시 (팝업 방지)
+      setCanPaste(true)
+      setContextMenu({ x: e.clientX, y: e.clientY })
+    }
+  }, [checkClipboard])
+
+  const handleUndo = useCallback(() => {
+    undo()
+  }, [undo])
+
+  const handleRedo = useCallback(() => {
+    redo()
+  }, [redo])
+
   const handleStartGuidePreference = useCallback(
     (next: boolean) => {
-      if (isDesktopRuntime) {
-        setHideStartGuide(false)
-        setStatus('status.startGuide.shown')
-        return
-      }
-
       setHideStartGuide(next)
       if (typeof window !== 'undefined') {
         try {
@@ -182,20 +224,21 @@ export function App() {
 
   const confirmDiscard = useCallback(
     async (message: string) => {
-      if (!isTauri()) {
-        return window.confirm(message)
+      if (isTauri()) {
+        try {
+          const { confirm } = await import('@tauri-apps/plugin-dialog')
+          return await confirm(message, {
+            title: 'HanaDoc',
+            kind: 'warning',
+            okLabel: t('dialog.discard'),
+            cancelLabel: t('dialog.cancel'),
+          })
+        } catch (error) {
+          console.error('[App] Native dialog failed, falling back to window.confirm', error)
+          return window.confirm(message)
+        }
       }
-
-      try {
-        const { confirm } = await import('@tauri-apps/plugin-dialog')
-        return await confirm(message, {
-          title: 'edit-md',
-          okLabel: t('dialog.discard'),
-          cancelLabel: t('dialog.cancel'),
-        })
-      } catch {
-        return window.confirm(message)
-      }
+      return window.confirm(message)
     },
     [t],
   )
@@ -464,8 +507,11 @@ export function App() {
 
     const pendingEditorChange = activeTabId === tabId && hasPendingEditorValue(targetTab.markdown)
 
-    if (targetTab.isDirty || pendingEditorChange) {
-      const discard = await confirmDiscard(t('dialog.tabDiscardConfirm', { name: targetTab.fileName }))
+    const isTabDirty = targetTab.isDirty || pendingEditorChange
+    
+    if (isTabDirty) {
+      const message = t('dialog.tabDiscardConfirm', { name: targetTab.fileName })
+      const discard = await confirmDiscard(message)
       if (!discard) {
         setStatus('status.tabClose.cancelled')
         return
@@ -527,8 +573,6 @@ export function App() {
     document.execCommand(command)
   }
 
-  const handleUndo = () => runEditorCommand('undo')
-  const handleRedo = () => runEditorCommand('redo')
   const handleCut = () => runEditorCommand('cut')
   const handleCopy = () => runEditorCommand('copy')
   const handlePaste = () => runEditorCommand('paste')
@@ -570,6 +614,7 @@ export function App() {
   const handleOpenMongTangAi = async () => {
     await handleOpenExternalUrl('https://mongtang-ai.vercel.app')
   }
+
 
   const getCurrentVersion = async () => {
     if (!isTauri()) {
@@ -744,6 +789,74 @@ export function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [activeTabId, isStartScreen, markdown, fileName, currentFile, tabs])
 
+  useEffect(() => {
+    if (isStartScreen) return
+
+    let cleanup: (() => void) | null = null
+    let isSyncing = false
+    let syncTimeout: number | null = null
+
+    const attachScrollListeners = () => {
+      const editor = editorRef.current
+      const preview = previewRef.current
+
+      if (!editor || !preview) return null
+
+      const handleEditorScroll = () => {
+        if (isSyncing) return
+        isSyncing = true
+        
+        const editorMax = editor.scrollHeight - editor.clientHeight
+        const previewMax = preview.scrollHeight - preview.clientHeight
+        
+        if (editorMax > 0 && previewMax > 0) {
+          const ratio = editor.scrollTop / editorMax
+          preview.scrollTop = ratio * previewMax
+        }
+
+        if (syncTimeout) window.clearTimeout(syncTimeout)
+        syncTimeout = window.setTimeout(() => { isSyncing = false }, 50)
+      }
+
+      const handlePreviewScroll = () => {
+        if (isSyncing) return
+        isSyncing = true
+
+        const editorMax = editor.scrollHeight - editor.clientHeight
+        const previewMax = preview.scrollHeight - preview.clientHeight
+        
+        if (editorMax > 0 && previewMax > 0) {
+          const ratio = preview.scrollTop / previewMax
+          editor.scrollTop = ratio * editorMax
+        }
+
+        if (syncTimeout) window.clearTimeout(syncTimeout)
+        syncTimeout = window.setTimeout(() => { isSyncing = false }, 50)
+      }
+
+      editor.addEventListener('scroll', handleEditorScroll, { passive: true })
+      preview.addEventListener('scroll', handlePreviewScroll, { passive: true })
+
+      return () => {
+        editor.removeEventListener('scroll', handleEditorScroll)
+        preview.removeEventListener('scroll', handlePreviewScroll)
+        if (syncTimeout) window.clearTimeout(syncTimeout)
+      }
+    }
+
+    // 레이지 로딩 대응을 위해 요소가 준비될 때까지 폴링
+    const pollTimer = setInterval(() => {
+      if (cleanup) return
+      cleanup = attachScrollListeners()
+      if (cleanup) clearInterval(pollTimer)
+    }, 100)
+
+    return () => {
+      clearInterval(pollTimer)
+      if (cleanup) cleanup()
+    }
+  }, [isStartScreen, markdown, activeTabId])
+
   const statusBarFileName = isStartScreen ? t('status.startScreen') : fileName
   const statusBarStatusText = isStartScreen
     ? t('status.waiting')
@@ -753,9 +866,12 @@ export function App() {
   const statusBarMessage = t(statusMessage.key, statusMessage.params)
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" onContextMenu={handleGlobalContextMenu}>
       <Toolbar
         allowEditorContextMenu={allowEditorContextMenu}
+        canRedo={canRedo}
+        canUndo={canUndo}
+        hasOpenFiles={tabs.length > 0 && !isStartScreen}
         indentSize={indentSize}
         onCheckForUpdates={() => {
           void handleCheckForUpdates(true)
@@ -781,7 +897,7 @@ export function App() {
           void handleShowVersionInfo()
         }}
         onShowStartGuide={() => {
-          handleStartGuidePreference(false)
+          handleStartGuidePreference(!hideStartGuide)
         }}
         onIndentSizeChange={handleIndentSizeChange}
         onSelectAll={handleSelectAll}
@@ -789,19 +905,31 @@ export function App() {
         onToggleEditorContextMenu={handleToggleEditorContextMenu}
         onUndo={handleUndo}
         recentFiles={recentFiles}
+        hideStartGuide={hideStartGuide}
+        hasSelection={hasSelection}
+        canPaste={canPaste}
         themeMode={themeMode}
       />
 
-      {!isStartScreen ? (
-        <DocumentTabs
-          activeTabId={activeTabId}
-          onClose={(tabId) => {
-            void handleCloseTab(tabId)
-          }}
-          onSelect={activateTab}
-          tabs={tabs.map((tab) => ({ fileName: tab.fileName, id: tab.id, isDirty: tab.isDirty }))}
-        />
-      ) : null}
+      <DocumentTabs
+        activeTabId={isStartScreen ? 'none' : activeTabId}
+        onClose={(tabId) => {
+          void handleCloseTab(tabId)
+        }}
+        onSelect={(tabId) => {
+          if (tabId !== 'none') activateTab(tabId)
+        }}
+        tabs={
+          isStartScreen
+            ? [{ fileName: t('tab.noFile'), id: 'none', isDirty: false, isCloseable: false }]
+            : tabs.map((tab) => ({
+                fileName: tab.fileName,
+                id: tab.id,
+                isDirty: tab.isDirty,
+                isCloseable: true,
+              }))
+        }
+      />
 
       <main className={`workspace${isStartScreen ? ' workspace--start' : ''}`}>
         {isStartScreen ? (
@@ -809,7 +937,7 @@ export function App() {
             <div className="pane__header">{t('app.startPaneHeader')}</div>
             <div className="preview">
               <StartScreen
-                canHideGuide={!isDesktopRuntime}
+                canHideGuide={true}
                 hideGuide={hideStartGuide}
                 onHideGuideChange={handleStartGuidePreference}
               />
@@ -825,13 +953,14 @@ export function App() {
                 </section>
               }
             >
-              <PreviewPane currentFilePath={currentFile?.path ?? null} markdown={markdown} />
+              <PreviewPane currentFilePath={currentFile?.path ?? null} markdown={markdown} previewRef={previewRef} />
             </Suspense>
             <EditorPane
               allowContextMenu={allowEditorContextMenu}
               indentSize={indentSize}
               markdown={markdown}
               onChange={updateMarkdown}
+              onSelectionChange={setHasSelection}
               textareaRef={editorRef}
             />
           </>
@@ -899,7 +1028,31 @@ export function App() {
           </section>
         </div>
       ) : null}
-      <StatusBar fileName={statusBarFileName} message={statusBarMessage} statusText={statusBarStatusText} />
+      <StatusBar
+        fileName={statusBarFileName}
+        message={statusBarMessage}
+        statusText={statusBarStatusText}
+        onOpenMongTangAi={handleOpenMongTangAi}
+      />
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          canRedo={canRedo}
+          canUndo={canUndo}
+          hasOpenFiles={tabs.length > 0}
+          onClose={() => setContextMenu(null)}
+          onCopy={handleCopy}
+          onCut={handleCut}
+          onPaste={handlePaste}
+          onRedo={handleRedo}
+          onSelectAll={handleSelectAll}
+          onUndo={handleUndo}
+          hasSelection={hasSelection}
+          canPaste={canPaste}
+        />
+      )}
     </div>
   )
 }

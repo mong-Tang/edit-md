@@ -4,23 +4,29 @@ type StatusBarProps = {
   fileName: string
   message?: string
   statusText: string
+  onOpenMongTangAi: () => void
 }
 
-export function StatusBar({ fileName, message, statusText }: StatusBarProps) {
+export function StatusBar({ fileName, message, statusText, onOpenMongTangAi }: StatusBarProps) {
   const { t } = useI18n()
   const safeMessage = message ?? t('status.ready')
 
   return (
     <footer className="statusbar">
-      <span className="statusbar__item statusbar__item--left" title={`${t('status.file')}: ${fileName}`}>
-        {t('status.file')}: {fileName}
-      </span>
-      <span className="statusbar__item statusbar__item--center" title={`${t('statusbar.status')}: ${statusText}`}>
+      <div className="statusbar__item statusbar__item--left">
+        <button type="button" className="badge-mongtang" onClick={onOpenMongTangAi}>
+          mongTang AI
+        </button>
+        <span className="statusbar__file" title={`${t('status.file')}: ${fileName}`}>
+          {t('status.file')}: {fileName}
+        </span>
+      </div>
+      <div className="statusbar__item statusbar__item--center" title={`${t('statusbar.status')}: ${statusText}`}>
         {t('statusbar.status')}: {statusText}
-      </span>
-      <span className="statusbar__item statusbar__item--right" title={`${t('statusbar.message')}: ${safeMessage}`}>
+      </div>
+      <div className="statusbar__item statusbar__item--right" title={`${t('statusbar.message')}: ${safeMessage}`}>
         {safeMessage}
-      </span>
+      </div>
     </footer>
   )
 }
