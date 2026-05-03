@@ -16,11 +16,10 @@ export function StartScreen({ canHideGuide = true, hideGuide, onHideGuideChange 
   return (
     <section className="start-screen" aria-label={t('start.aria')}>
       <div className="start-screen__card">
-        <div className="start-screen__brand">
+        <h1 className="start-screen__title">
           <div className="start-screen__logo">md</div>
-          <div>마크다운 편집기</div>
-        </div>
-        <h1 className="start-screen__title">{t('start.title')}</h1>
+          {t('start.title')}
+        </h1>
         <p className="start-screen__desc">
           <span className="start-screen__label">{t('start.label.body')}</span>
           {t('start.body')}

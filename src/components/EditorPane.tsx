@@ -323,7 +323,7 @@ export function EditorPane({
             })
           }}
           onChange={(event) => onChange(event.target.value)}
-          wrap="off"
+          wrap="soft"
         />
         {isQuickInsertOpen ? (
           <div

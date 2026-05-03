@@ -161,12 +161,14 @@ export function Toolbar({
             <div className="menu__dropdown" role="menu" aria-label={t('menu.file.aria')}>
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onNewFile)}>
                 <FilePlus size={16} aria-hidden="true" />
-                <span>{t('menu.file.new')}</span>
+                <span className="menu__item-label">{t('menu.file.new')}</span>
+                <span className="menu__item-shortcut">Ctrl+N</span>
               </button>
               <div className="menu__separator" />
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onOpen)}>
                 <FolderOpen size={16} aria-hidden="true" />
-                <span>{t('menu.file.open')}</span>
+                <span className="menu__item-label">{t('menu.file.open')}</span>
+                <span className="menu__item-shortcut">Ctrl+O</span>
               </button>
               <button
                 type="button"
@@ -176,7 +178,8 @@ export function Toolbar({
                 onClick={() => runMenuAction(onSave)}
               >
                 <Save size={16} aria-hidden="true" />
-                <span>{t('menu.file.save')}</span>
+                <span className="menu__item-label">{t('menu.file.save')}</span>
+                <span className="menu__item-shortcut">Ctrl+S</span>
               </button>
               <button
                 type="button"
@@ -197,7 +200,8 @@ export function Toolbar({
                 onClick={() => runMenuAction(onCloseFile)}
               >
                 <X size={16} aria-hidden="true" />
-                <span>{t('menu.file.close')}</span>
+                <span className="menu__item-label">{t('menu.file.close')}</span>
+                <span className="menu__item-shortcut">Ctrl+W</span>
               </button>
               <div className="menu__separator" />
               <button
@@ -213,7 +217,8 @@ export function Toolbar({
               <div className="menu__separator" />
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onExit)}>
                 <LogOut size={16} aria-hidden="true" />
-                <span>{t('menu.file.exit')}</span>
+                <span className="menu__item-label">{t('menu.file.exit')}</span>
+                <span className="menu__item-shortcut">Ctrl+Q</span>
               </button>
               <div className="menu__separator" />
               <div className="menu__section-title">{t('menu.file.recent')}</div>
@@ -264,7 +269,7 @@ export function Toolbar({
                 }}
               >
                 <Smile size={16} aria-hidden="true" />
-                <span className="menu__item-text">{t('menu.edit.emoji')}</span>
+                <span className="menu__item-label">{t('menu.edit.emoji')}</span>
                 <span className="menu__item-shortcut">Win+.</span>
               </button>
               <div className="menu__separator" />
@@ -276,7 +281,7 @@ export function Toolbar({
                 onClick={() => runMenuAction(onUndo)}
               >
                 <Undo size={16} aria-hidden="true" />
-                <span className="menu__item-text">{t('menu.edit.undo')}</span>
+                <span className="menu__item-label">{t('menu.edit.undo')}</span>
                 <span className="menu__item-shortcut">Ctrl+Z</span>
               </button>
               <button
@@ -287,7 +292,7 @@ export function Toolbar({
                 onClick={() => runMenuAction(onRedo)}
               >
                 <Redo size={16} aria-hidden="true" />
-                <span className="menu__item-text">{t('menu.edit.redo')}</span>
+                <span className="menu__item-label">{t('menu.edit.redo')}</span>
                 <span className="menu__item-shortcut">Ctrl+Y</span>
               </button>
               <div className="menu__separator" />
@@ -299,7 +304,7 @@ export function Toolbar({
                 onClick={() => runMenuAction(onCut)}
               >
                 <Scissors size={16} aria-hidden="true" />
-                <span className="menu__item-text">{t('menu.edit.cut')}</span>
+                <span className="menu__item-label">{t('menu.edit.cut')}</span>
                 <span className="menu__item-shortcut">Ctrl+X</span>
               </button>
               <button
@@ -310,7 +315,7 @@ export function Toolbar({
                 onClick={() => runMenuAction(onCopy)}
               >
                 <Copy size={16} aria-hidden="true" />
-                <span className="menu__item-text">{t('menu.edit.copy')}</span>
+                <span className="menu__item-label">{t('menu.edit.copy')}</span>
                 <span className="menu__item-shortcut">Ctrl+C</span>
               </button>
               <button
@@ -322,7 +327,7 @@ export function Toolbar({
                 onClick={() => runMenuAction(onPaste)}
               >
                 <Clipboard size={16} aria-hidden="true" />
-                <span className="menu__item-text">{t('menu.edit.paste')}</span>
+                <span className="menu__item-label">{t('menu.edit.paste')}</span>
                 <span className="menu__item-shortcut">Ctrl+V</span>
               </button>
               <button
@@ -334,7 +339,7 @@ export function Toolbar({
                 onClick={() => runMenuAction(onPaste)}
               >
                 <Type size={16} aria-hidden="true" />
-                <span className="menu__item-text">{t('menu.edit.pastePlain')}</span>
+                <span className="menu__item-label">{t('menu.edit.pastePlain')}</span>
                 <span className="menu__item-shortcut">Ctrl+Shift+V</span>
               </button>
               <div className="menu__separator" />
@@ -346,7 +351,8 @@ export function Toolbar({
                 onClick={() => runMenuAction(onSelectAll)}
               >
                 <MousePointerClick size={16} aria-hidden="true" />
-                <span>{t('menu.edit.selectAll')}</span>
+                <span className="menu__item-label">{t('menu.edit.selectAll')}</span>
+                <span className="menu__item-shortcut">Ctrl+A</span>
               </button>
             </div>
           ) : null}
@@ -529,18 +535,18 @@ export function Toolbar({
                 onClick={() => runMenuAction(onOpenMongTangAi)}
               >
                 <RefreshCw size={16} aria-hidden="true" />
-                <span>{t('toolbar.link.mongTang')}</span>
+                <span className="menu__item-label">{t('toolbar.link.mongTang')}</span>
               </button>
               <div className="menu__separator" />
               {isDesktopRuntime ? (
                 <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onCheckForUpdates)}>
                   <RefreshCw size={16} aria-hidden="true" />
-                  <span>{t('menu.help.checkUpdates')}</span>
+                  <span className="menu__item-label">{t('menu.help.checkUpdates')}</span>
                 </button>
               ) : null}
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onShowVersionInfo)}>
                 <Info size={16} aria-hidden="true" />
-                <span>{t('menu.help.versionInfo')}</span>
+                <span className="menu__item-label">{t('menu.help.versionInfo')}</span>
               </button>
             </div>
           ) : null}

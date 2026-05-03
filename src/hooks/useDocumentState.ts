@@ -193,8 +193,32 @@ export function useDocumentState(fileService: FileService) {
 
   const createNewDocument = (options?: { markdown?: string; fileName?: string }) => {
     const initialMarkdown = options?.markdown ?? INITIAL_MARKDOWN
+    const fileName = options?.fileName ?? SAMPLE_NAME
+
+    // 만약 현재 활성화된 탭이 아무 내용 없는 untitled 상태라면 교체
+    if (activeTab && isPristineUntitledTab(activeTab)) {
+      setTabs((current) =>
+        current.map((tab) =>
+          tab.id === activeTab.id
+            ? {
+                ...tab,
+                fileName,
+                isDirty: false,
+                markdown: initialMarkdown,
+                savedMarkdown: initialMarkdown,
+                history: [initialMarkdown],
+                currentIndex: 0,
+              }
+            : tab,
+        ),
+      )
+      setActiveTabId(activeTab.id)
+      return activeTab.id
+    }
+
+    // 그렇지 않으면 새로운 탭 추가
     const nextTab = createTab({
-      fileName: options?.fileName ?? SAMPLE_NAME,
+      fileName,
       isDirty: false,
       markdown: initialMarkdown,
       savedMarkdown: initialMarkdown,
@@ -203,6 +227,7 @@ export function useDocumentState(fileService: FileService) {
     })
     setTabs((current) => [...current, nextTab])
     setActiveTabId(nextTab.id)
+    return nextTab.id
   }
 
   const openPicker = async () => {

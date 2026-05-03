@@ -9,7 +9,7 @@ type AboutModalProps = {
   onClose: () => void
   onOpenExternal: (url: string) => void
   onPrimaryAction?: (() => void) | null
-
+  primaryLabel?: string | null
 }
 
 export function AboutModal({
@@ -20,7 +20,7 @@ export function AboutModal({
   onClose,
   onOpenExternal,
   onPrimaryAction = null,
-
+  primaryLabel = null,
 }: AboutModalProps) {
   const { t } = useI18n()
   const websiteUrl = 'https://mongtang-ai.vercel.app'
@@ -74,8 +74,7 @@ export function AboutModal({
         ) : (
           <>
             <p className="about-modal__description">
-              사용자의 사유를 가장 순수하게 담아내는 지능형 마크다운 워크스테이션입니다. 
-              복잡한 설정을 배제하고 오직 글쓰기와 시각화에만 집중할 수 있는 최적의 환경을 제공합니다.
+              {t('about.description')}
             </p>
             <p className="about-modal__line">{t('about.version', { version: appVersion })}</p>
             <p className="about-modal__line">
@@ -91,25 +90,27 @@ export function AboutModal({
               </a>
             </p>
             <div className="about-modal__changelog">
-              <p className="about-modal__changelog-title">최근 주요 개선 사항</p>
-              <li className="about-modal__list-item">초슬림 워크스테이션 레이아웃 최적화</li>
-              <li className="about-modal__list-item">화면 전체를 활용하는 Zero-Padding 시스템</li>
-              <li className="about-modal__list-item">전문가용 정밀 커서 및 스크롤 조작 환경</li>
-              <li className="about-modal__list-item">다크 모드 가독성 및 UI 감도 미세 조정</li>
+              <p className="about-modal__changelog-title">{t('about.features.title')}</p>
+              <li className="about-modal__list-item">{t('about.features.1')}</li>
+              <li className="about-modal__list-item">{t('about.features.2')}</li>
+              <li className="about-modal__list-item">{t('about.features.3')}</li>
+              <li className="about-modal__list-item">{t('about.features.4')}</li>
             </div>
           </>
         )}
         <div className="about-modal__actions">
-          <button 
-            type="button" 
-            className="about-modal__button--secondary"
-            onClick={() => {
-              onPrimaryAction?.() // 여기서 changelog를 새 탭으로 여는 함수 호출
-            }}
-          >
-            변경 사항을 에디터로 열기
-          </button>
-          <button type="button" onClick={onClose}>
+          {onPrimaryAction && primaryLabel && (
+            <button 
+              type="button" 
+              className="about-modal__button--primary"
+              onClick={() => {
+                onPrimaryAction?.() 
+              }}
+            >
+              {primaryLabel}
+            </button>
+          )}
+          <button type="button" onClick={onClose} className="about-modal__button--secondary">
             {t('about.close')}
           </button>
         </div>

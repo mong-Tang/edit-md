@@ -1,3 +1,4 @@
+import { TitleBar } from './components/TitleBar'
 import { isTauri } from '@tauri-apps/api/core'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
@@ -98,8 +99,9 @@ export function App() {
   })
   const [isAboutOpen, setIsAboutOpen] = useState(false)
   const [isNewFileModalOpen, setIsNewFileModalOpen] = useState(false)
-  const [aboutCustomLines, setAboutCustomLines] = useState<string[] | null>(null)
   const [aboutCustomTitle, setAboutCustomTitle] = useState<string | null>(null)
+  const [aboutCustomLines, setAboutCustomLines] = useState<string[] | null>(null)
+  const [aboutPrimaryLabel, setAboutPrimaryLabel] = useState<string | null>(null)
 
 
   const [aboutVersion, setAboutVersion] = useState('')
@@ -108,7 +110,7 @@ export function App() {
   const isClosingRef = useRef(false)
   const editorRef = useRef<HTMLTextAreaElement>(null)
   const previewRef = useRef<HTMLDivElement>(null)
-  const autoUpdateCheckRef = useRef<() => void>(() => {})
+  const autoUpdateCheckRef = useRef<() => void>(() => { })
   const { themeMode, setThemeMode } = useTheme()
   const { addRecentFile, recentFiles, removeRecentFile } = useRecentFiles()
   const {
@@ -161,8 +163,11 @@ export function App() {
   }, [])
 
   const handleGlobalContextMenu = useCallback((e: React.MouseEvent) => {
+    // 우클릭 메뉴 비활성화 상태면 커스텀 메뉴를 띄우지 않음
+    if (!allowEditorContextMenu) return
+
     e.preventDefault()
-    
+
     if (isTauri()) {
       // 데스크톱 앱에서는 클립보드 체크 후 메뉴 표시
       void checkClipboard().then(() => {
@@ -173,7 +178,7 @@ export function App() {
       setCanPaste(true)
       setContextMenu({ x: e.clientX, y: e.clientY })
     }
-  }, [checkClipboard])
+  }, [allowEditorContextMenu, checkClipboard])
 
   const handleUndo = useCallback(() => {
     undo()
@@ -446,7 +451,7 @@ export function App() {
       unlisten?.()
     }
   }, [handleOpenPath])
-  
+
   // 문서가 열리거나 탭이 전환될 때 에디터에 자동 포커스
   useEffect(() => {
     if (isStartScreen || !activeTabId) return
@@ -523,7 +528,7 @@ export function App() {
     const pendingEditorChange = activeTabId === tabId && hasPendingEditorValue(targetTab.markdown)
 
     const isTabDirty = targetTab.isDirty || pendingEditorChange
-    
+
     if (isTabDirty) {
       const message = t('dialog.tabDiscardConfirm', { name: targetTab.fileName })
       const discard = await confirmDiscard(message)
@@ -646,23 +651,10 @@ export function App() {
 
   const handleShowVersionInfo = async () => {
     const version = await getCurrentVersion()
-    
-    // changelog.txt 파일 읽어오기
-    try {
-      const response = await fetch('/changelog.txt')
-      if (response.ok) {
-        const text = await response.text()
-        const lines = text.split('\n').filter(line => line.trim() !== '')
-        setAboutCustomLines(lines)
-      }
-    } catch (error) {
-      console.error('[App] Failed to load changelog', error)
-    }
-
-    setAboutCustomTitle(null) // 기본 타이틀 사용 (mongTang.md)
-
-
     setAboutVersion(version)
+    setAboutCustomLines(null)
+    setAboutCustomTitle(t('menu.help.versionInfo'))
+    setAboutPrimaryLabel(null) // About 모드에서는 버튼 숨김
     setIsAboutOpen(true)
     setStatus('status.version.current', { version })
   }
@@ -689,7 +681,6 @@ export function App() {
   const handleCheckForUpdates = async (interactive = false) => {
     const currentVersion = await getCurrentVersion()
     
-    // 수동 체크 시에만 상태바에 '확인 중' 표시
     if (interactive) {
       setStatus('status.update.checking')
     }
@@ -719,30 +710,46 @@ export function App() {
       }
 
       const isNewVersion = compareVersions(payload.version, currentVersion) > 0
+      
+      // 체인지로그 정보 가져오기
+      let changelogLines: string[] = []
+      try {
+        const logRes = await fetch('/changelog.md')
+        if (logRes.ok) {
+          const text = await logRes.text()
+          const lines = text.split('\n')
+          let foundFirstVersion = false
+          for (const line of lines) {
+            if (line.startsWith('## [')) {
+              if (foundFirstVersion) break
+              foundFirstVersion = true
+              continue
+            }
+            if (foundFirstVersion && line.trim().startsWith('-')) {
+              changelogLines.push(line)
+            }
+            if (changelogLines.length >= 5) break
+          }
+        }
+      } catch { /* ignore */ }
 
       if (!isNewVersion) {
-        // 최신 버전일 때
         if (interactive) {
-          // 수동 체크면 모달로 확실히 알림
-          openUpdateResultModal([t('status.update.latest', { version: currentVersion })])
-          setStatus('status.ready') // 상태바는 원래대로
+          setAboutCustomTitle(t('menu.help.checkUpdates'))
+          setAboutCustomLines([
+            t('update.latest.intro', { version: currentVersion }),
+            t('update.latest.improvements'),
+            ...changelogLines
+          ])
+          setAboutPrimaryLabel(t('update.modal.viewHistory'))
+          setIsAboutOpen(true)
+          setStatus('status.ready')
         }
-        // 자동 체크 시에는 아무 말 안 함 (조용히)
-        return
-      }
-
-      // 새 버전이 있을 때
-      if (interactive) {
-        const changelog = payload.changelog || [
-          t('status.update.newVersionAvailable', { version: payload.version }),
-          '- 에디터 성능 향상 및 안정성 개선',
-          '- UI 레이아웃 정밀 보정 (Zero-Padding)',
-          '- 다크 모드 색상 최적화',
-        ]
-        
-        openUpdateResultModal(changelog)
       } else {
-        // 자동 체크에서 새 버전 발견 시에만 상태바에 살짝 노출
+        setAboutCustomTitle(t('status.update.newVersionAvailable', { version: payload.version }))
+        setAboutCustomLines(changelogLines.length > 0 ? changelogLines : [t('dialog.update.newVersionConfirm', { version: payload.version, currentVersion })])
+        setAboutPrimaryLabel(t('update.modal.checkUpdates'))
+        setIsAboutOpen(true)
         setStatus('status.update.newVersionAvailable', { version: payload.version })
       }
     } catch (error) {
@@ -830,10 +837,10 @@ export function App() {
       const handleEditorScroll = () => {
         if (isSyncing) return
         isSyncing = true
-        
+
         const editorMax = editor.scrollHeight - editor.clientHeight
         const previewMax = preview.scrollHeight - preview.clientHeight
-        
+
         if (editorMax > 0 && previewMax > 0) {
           const ratio = editor.scrollTop / editorMax
           preview.scrollTop = ratio * previewMax
@@ -849,7 +856,7 @@ export function App() {
 
         const editorMax = editor.scrollHeight - editor.clientHeight
         const previewMax = preview.scrollHeight - preview.clientHeight
-        
+
         if (editorMax > 0 && previewMax > 0) {
           const ratio = preview.scrollTop / previewMax
           editor.scrollTop = ratio * editorMax
@@ -892,49 +899,52 @@ export function App() {
 
   return (
     <div className="app-shell" onContextMenu={handleGlobalContextMenu}>
-      <Toolbar
-        allowEditorContextMenu={allowEditorContextMenu}
-        canRedo={canRedo}
-        canUndo={canUndo}
-        hasOpenFiles={tabs.length > 0 && !isStartScreen}
-        indentSize={indentSize}
-        onCheckForUpdates={() => {
-          void handleCheckForUpdates(true)
-        }}
-        onCopy={handleCopy}
-        onCut={handleCut}
-        onCloseFile={() => {
-          void handleCloseCurrentTab()
-        }}
-        onExit={() => {
-          void handleExit()
-        }}
-        onExportHtml={handleExportHtml}
-        onNewFile={handleNewFile}
-        onOpen={handleOpen}
-        onOpenMongTangAi={handleOpenMongTangAi}
-        onPaste={handlePaste}
-        onRecentFileSelect={handleRecentFileSelect}
-        onRedo={handleRedo}
-        onSave={handleSave}
-        onSaveAs={handleSaveAs}
-        onShowVersionInfo={() => {
-          void handleShowVersionInfo()
-        }}
-        onShowStartGuide={() => {
-          handleStartGuidePreference(!hideStartGuide)
-        }}
-        onIndentSizeChange={handleIndentSizeChange}
-        onSelectAll={handleSelectAll}
-        onThemeChange={setThemeMode}
-        onToggleEditorContextMenu={handleToggleEditorContextMenu}
-        onUndo={handleUndo}
-        recentFiles={recentFiles}
-        hideStartGuide={hideStartGuide}
-        hasSelection={hasSelection}
-        canPaste={canPaste}
-        themeMode={themeMode}
-      />
+      <header className="app-header">
+        <TitleBar />
+        <Toolbar
+          allowEditorContextMenu={allowEditorContextMenu}
+          canRedo={canRedo}
+          canUndo={canUndo}
+          hasOpenFiles={tabs.length > 0 && !isStartScreen}
+          indentSize={indentSize}
+          onCheckForUpdates={() => {
+            void handleCheckForUpdates(true)
+          }}
+          onCopy={handleCopy}
+          onCut={handleCut}
+          onCloseFile={() => {
+            void handleCloseCurrentTab()
+          }}
+          onExit={() => {
+            void handleExit()
+          }}
+          onExportHtml={handleExportHtml}
+          onNewFile={handleNewFile}
+          onOpen={handleOpen}
+          onOpenMongTangAi={handleOpenMongTangAi}
+          onPaste={handlePaste}
+          onRecentFileSelect={handleRecentFileSelect}
+          onRedo={handleRedo}
+          onSave={handleSave}
+          onSaveAs={handleSaveAs}
+          onShowVersionInfo={() => {
+            void handleShowVersionInfo()
+          }}
+          onShowStartGuide={() => {
+            handleStartGuidePreference(!hideStartGuide)
+          }}
+          onIndentSizeChange={handleIndentSizeChange}
+          onSelectAll={handleSelectAll}
+          onThemeChange={setThemeMode}
+          onToggleEditorContextMenu={handleToggleEditorContextMenu}
+          onUndo={handleUndo}
+          recentFiles={recentFiles}
+          hideStartGuide={hideStartGuide}
+          hasSelection={hasSelection}
+          canPaste={canPaste}
+          themeMode={themeMode}
+        />
+      </header>
 
       <DocumentTabs
         activeTabId={isStartScreen ? 'none' : activeTabId}
@@ -948,11 +958,11 @@ export function App() {
           isStartScreen
             ? [{ fileName: t('tab.noFile'), id: 'none', isDirty: false, isCloseable: false }]
             : tabs.map((tab) => ({
-                fileName: tab.fileName,
-                id: tab.id,
-                isDirty: tab.isDirty,
-                isCloseable: true,
-              }))
+              fileName: tab.fileName,
+              id: tab.id,
+              isDirty: tab.isDirty,
+              isCloseable: true,
+            }))
         }
       />
 
@@ -1002,15 +1012,17 @@ export function App() {
           onOpenExternal={(url) => {
             void handleOpenExternalUrl(url)
           }}
+          primaryLabel={aboutPrimaryLabel}
           onPrimaryAction={async () => {
             try {
-              const response = await fetch('/changelog.txt')
+              const response = await fetch('/changelog.md')
               if (response.ok) {
                 const text = await response.text()
-                // 새 탭으로 changelog 열기
-                createNewDocument({ 
-                  markdown: text, 
-                  fileName: 'changelog.txt'
+                
+                // 새 탭으로 changelog 열기 (createNewDocument가 내부적으로 빈 탭 교체 처리)
+                createNewDocument({
+                  markdown: text,
+                  fileName: 'changelog.md'
                 })
                 setIsStartScreen(false)
                 handleCloseAboutModal()
