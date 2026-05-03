@@ -191,9 +191,10 @@ export function useDocumentState(fileService: FileService) {
     )
   }
 
-  const createNewDocument = (options?: { markdown?: string }) => {
+  const createNewDocument = (options?: { markdown?: string; fileName?: string }) => {
     const initialMarkdown = options?.markdown ?? INITIAL_MARKDOWN
     const nextTab = createTab({
+      fileName: options?.fileName ?? SAMPLE_NAME,
       isDirty: false,
       markdown: initialMarkdown,
       savedMarkdown: initialMarkdown,

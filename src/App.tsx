@@ -37,6 +37,7 @@ type UpdateFeed = {
   downloadUrl: string
   notesUrl?: string
   version: string
+  changelog?: string[]
 }
 
 type StatusState = {
@@ -47,6 +48,8 @@ type StatusState = {
 function normalizeLineEndings(value: string) {
   return value.replace(/\r\n/g, '\n')
 }
+
+
 
 function compareVersions(a: string, b: string) {
   const parse = (value: string) =>
@@ -97,8 +100,8 @@ export function App() {
   const [isNewFileModalOpen, setIsNewFileModalOpen] = useState(false)
   const [aboutCustomLines, setAboutCustomLines] = useState<string[] | null>(null)
   const [aboutCustomTitle, setAboutCustomTitle] = useState<string | null>(null)
-  const [aboutPrimaryActionLabel, setAboutPrimaryActionLabel] = useState<string | null>(null)
-  const [aboutPrimaryActionUrl, setAboutPrimaryActionUrl] = useState<string | null>(null)
+
+
   const [aboutVersion, setAboutVersion] = useState('')
   const dirtyRef = useRef(false)
   const markdownRef = useRef('')
@@ -443,6 +446,18 @@ export function App() {
       unlisten?.()
     }
   }, [handleOpenPath])
+  
+  // 문서가 열리거나 탭이 전환될 때 에디터에 자동 포커스
+  useEffect(() => {
+    if (isStartScreen || !activeTabId) return
+
+    // 에디터가 마운트된 후 포커스를 주기 위해 약간의 지연 시간 부여
+    const timerId = window.setTimeout(() => {
+      focusEditor()
+    }, 50)
+
+    return () => window.clearTimeout(timerId)
+  }, [isStartScreen, activeTabId])
 
   const handleRecentFileSelect = async (file: RecentFileEntry) => {
     if (file.backend === 'browser' || !file.path) {
@@ -631,10 +646,22 @@ export function App() {
 
   const handleShowVersionInfo = async () => {
     const version = await getCurrentVersion()
-    setAboutCustomTitle(null)
-    setAboutCustomLines(null)
-    setAboutPrimaryActionLabel(null)
-    setAboutPrimaryActionUrl(null)
+    
+    // changelog.txt 파일 읽어오기
+    try {
+      const response = await fetch('/changelog.txt')
+      if (response.ok) {
+        const text = await response.text()
+        const lines = text.split('\n').filter(line => line.trim() !== '')
+        setAboutCustomLines(lines)
+      }
+    } catch (error) {
+      console.error('[App] Failed to load changelog', error)
+    }
+
+    setAboutCustomTitle(null) // 기본 타이틀 사용 (mongTang.md)
+
+
     setAboutVersion(version)
     setIsAboutOpen(true)
     setStatus('status.version.current', { version })
@@ -644,16 +671,16 @@ export function App() {
     setIsAboutOpen(false)
     setAboutCustomTitle(null)
     setAboutCustomLines(null)
-    setAboutPrimaryActionLabel(null)
-    setAboutPrimaryActionUrl(null)
+
+
   }
 
   const openUpdateResultModal = useCallback(
-    (lines: string[], options?: { actionLabel?: string; actionUrl?: string }) => {
+    (lines: string[]) => {
       setAboutCustomTitle(t('update.modal.title'))
       setAboutCustomLines(lines)
-      setAboutPrimaryActionLabel(options?.actionLabel ?? null)
-      setAboutPrimaryActionUrl(options?.actionUrl ?? null)
+
+
       setIsAboutOpen(true)
     },
     [t],
@@ -661,15 +688,15 @@ export function App() {
 
   const handleCheckForUpdates = async (interactive = false) => {
     const currentVersion = await getCurrentVersion()
-    if (!interactive) {
+    
+    // 수동 체크 시에만 상태바에 '확인 중' 표시
+    if (interactive) {
       setStatus('status.update.checking')
     }
 
     if (!UPDATE_FEED_URL) {
       if (interactive) {
         openUpdateResultModal([t('status.update.urlMissing', { version: currentVersion })])
-      } else {
-        setStatus('status.update.urlMissing', { version: currentVersion })
       }
       return
     }
@@ -679,8 +706,6 @@ export function App() {
       if (!response.ok) {
         if (interactive) {
           openUpdateResultModal([t('status.update.checkFailedCode', { code: response.status })])
-        } else {
-          setStatus('status.update.checkFailedCode', { code: response.status })
         }
         return
       }
@@ -689,41 +714,41 @@ export function App() {
       if (!payload.version || !payload.downloadUrl) {
         if (interactive) {
           openUpdateResultModal([t('status.update.invalidFormat')])
-        } else {
-          setStatus('status.update.invalidFormat')
         }
         return
       }
 
-      if (compareVersions(payload.version, currentVersion) <= 0) {
+      const isNewVersion = compareVersions(payload.version, currentVersion) > 0
+
+      if (!isNewVersion) {
+        // 최신 버전일 때
         if (interactive) {
+          // 수동 체크면 모달로 확실히 알림
           openUpdateResultModal([t('status.update.latest', { version: currentVersion })])
-        } else {
-          setStatus('status.update.latest', { version: currentVersion })
+          setStatus('status.ready') // 상태바는 원래대로
         }
+        // 자동 체크 시에는 아무 말 안 함 (조용히)
         return
       }
 
+      // 새 버전이 있을 때
       if (interactive) {
-        openUpdateResultModal(
-          [
-            t('status.update.newVersionAvailable', { version: payload.version }),
-            t('status.version.current', { version: currentVersion }),
-          ],
-          {
-            actionLabel: t('update.modal.openDownload'),
-            actionUrl: payload.downloadUrl,
-          },
-        )
+        const changelog = payload.changelog || [
+          t('status.update.newVersionAvailable', { version: payload.version }),
+          '- 에디터 성능 향상 및 안정성 개선',
+          '- UI 레이아웃 정밀 보정 (Zero-Padding)',
+          '- 다크 모드 색상 최적화',
+        ]
+        
+        openUpdateResultModal(changelog)
       } else {
+        // 자동 체크에서 새 버전 발견 시에만 상태바에 살짝 노출
         setStatus('status.update.newVersionAvailable', { version: payload.version })
       }
     } catch (error) {
       console.error('[App] update check failed', { error })
       if (interactive) {
         openUpdateResultModal([t('status.update.checkFailed')])
-      } else {
-        setStatus('status.update.checkFailed')
       }
     }
   }
@@ -977,18 +1002,25 @@ export function App() {
           onOpenExternal={(url) => {
             void handleOpenExternalUrl(url)
           }}
-          onPrimaryAction={
-            aboutPrimaryActionUrl
-              ? () => {
-                  if (isTauri()) {
-                    void openUrl(aboutPrimaryActionUrl)
-                  } else {
-                    window.open(aboutPrimaryActionUrl, '_blank', 'noopener,noreferrer')
-                  }
-                }
-              : null
-          }
-          primaryActionLabel={aboutPrimaryActionLabel}
+          onPrimaryAction={async () => {
+            try {
+              const response = await fetch('/changelog.txt')
+              if (response.ok) {
+                const text = await response.text()
+                // 새 탭으로 changelog 열기
+                createNewDocument({ 
+                  markdown: text, 
+                  fileName: 'changelog.txt'
+                })
+                setIsStartScreen(false)
+                handleCloseAboutModal()
+                setStatus('status.ready')
+              }
+            } catch (error) {
+              console.error('[App] Failed to open changelog in editor', error)
+            }
+          }}
+
         />
       </Suspense>
       {isNewFileModalOpen ? (
