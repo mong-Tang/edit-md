@@ -1,3 +1,4 @@
+import { Sparkles } from 'lucide-react'
 import { useI18n } from '../i18n'
 
 type StatusBarProps = {
@@ -15,6 +16,7 @@ export function StatusBar({ fileName, message, statusText, onOpenMongTangAi }: S
     <footer className="statusbar">
       <div className="statusbar__item statusbar__item--left">
         <button type="button" className="badge-mongtang" onClick={onOpenMongTangAi}>
+          <Sparkles size={12} style={{ marginRight: '4px' }} />
           mongTang AI
         </button>
         <span className="statusbar__file" title={`${t('status.file')}: ${fileName}`}>

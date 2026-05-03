@@ -275,9 +275,12 @@ html, body, #app {
   letter-spacing: 0.2px;
 }
 
-.menu__item:hover {
+.menu__item:hover,
+.menu__item:focus,
+.menu__item:focus-visible {
   background: var(--hover-bg);
   color: var(--accent);
+  outline: none; /* 기본 아웃라인 제거하고 배경색으로 대체 */
 }
 
 .menu__item--recent {

@@ -103,36 +103,121 @@ export function Toolbar({
   const { locale, setLocale, t } = useI18n()
   const isDesktopRuntime = isTauri()
   const [openMenu, setOpenMenu] = useState<MenuKey>(null)
+  const [focusedItemIndex, setFocusedItemIndex] = useState<number>(-1)
   const rootRef = useRef<HTMLElement | null>(null)
+
+  const menuOrder: Exclude<MenuKey, null>[] = ['file', 'edit', 'view', 'help']
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpenMenu(null)
+        setFocusedItemIndex(-1)
       }
     }
 
-    const handleEscape = (event: KeyboardEvent) => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      // Escape to close
       if (event.key === 'Escape') {
         setOpenMenu(null)
+        setFocusedItemIndex(-1)
+        return
+      }
+
+      // If no menu is open, handle Alt + Mnemonics
+      if (!openMenu) {
+        if (event.altKey && !event.ctrlKey && !event.shiftKey) {
+          const key = event.key.toLowerCase()
+          const menuIdx = menuOrder.findIndex(m => m[0] === key)
+          if (menuIdx !== -1) {
+            event.preventDefault()
+            setOpenMenu(menuOrder[menuIdx])
+            setFocusedItemIndex(0) // Open and focus first item
+          }
+        }
+        return
+      }
+
+      // If menu is open, handle navigation
+      const currentItems = Array.from(rootRef.current?.querySelectorAll('.menu__dropdown .menu__item') || []) as HTMLButtonElement[]
+      
+      switch (event.key) {
+        case 'ArrowDown':
+          event.preventDefault()
+          setFocusedItemIndex(prev => {
+            let next = prev + 1
+            while (next < currentItems.length && currentItems[next].disabled) next++
+            return next < currentItems.length ? next : prev
+          })
+          break
+        case 'ArrowUp':
+          event.preventDefault()
+          setFocusedItemIndex(prev => {
+            let next = prev - 1
+            while (next >= 0 && currentItems[next].disabled) next--
+            return next >= 0 ? next : prev
+          })
+          break
+        case 'ArrowRight':
+          event.preventDefault()
+          const nextMenuIdx = (menuOrder.indexOf(openMenu) + 1) % menuOrder.length
+          setOpenMenu(menuOrder[nextMenuIdx])
+          setFocusedItemIndex(0)
+          break
+        case 'ArrowLeft':
+          event.preventDefault()
+          const prevMenuIdx = (menuOrder.indexOf(openMenu) - 1 + menuOrder.length) % menuOrder.length
+          setOpenMenu(menuOrder[prevMenuIdx])
+          setFocusedItemIndex(0)
+          break
+        case 'Enter':
+        case ' ':
+          event.preventDefault()
+          if (focusedItemIndex !== -1 && currentItems[focusedItemIndex]) {
+            currentItems[focusedItemIndex].click()
+          }
+          break
       }
     }
 
     window.addEventListener('mousedown', handleClickOutside)
-    window.addEventListener('keydown', handleEscape)
+    window.addEventListener('keydown', handleKeydown)
 
     return () => {
       window.removeEventListener('mousedown', handleClickOutside)
-      window.removeEventListener('keydown', handleEscape)
+      window.removeEventListener('keydown', handleKeydown)
     }
-  }, [])
+  }, [openMenu, focusedItemIndex])
+
+  // Sync focus when focusedItemIndex changes
+  useEffect(() => {
+    if (openMenu && focusedItemIndex !== -1) {
+      const currentItems = Array.from(rootRef.current?.querySelectorAll('.menu__dropdown .menu__item') || []) as HTMLButtonElement[]
+      currentItems[focusedItemIndex]?.focus()
+    }
+  }, [focusedItemIndex, openMenu])
+
+  const renderMnemonic = (text: string) => {
+    const parts = text.split('&')
+    if (parts.length < 2) return text
+    
+    return (
+      <>
+        {parts[0]}
+        <u>{parts[1][0]}</u>
+        {parts[1].slice(1)}
+      </>
+    )
+  }
 
   const toggleMenu = (menu: Exclude<MenuKey, null>) => {
     setOpenMenu((current) => (current === menu ? null : menu))
+    setFocusedItemIndex(0) // 메뉴를 열 때 첫 번째 항목에 포커스 준비
   }
 
   const runMenuAction = (action: () => void) => {
     setOpenMenu(null)
+    setFocusedItemIndex(-1)
     action()
   }
 
@@ -155,7 +240,7 @@ export function Toolbar({
               if (openMenu) setOpenMenu('file')
             }}
           >
-            {t('menu.file')}
+            {renderMnemonic(t('menu.file'))}
           </button>
           {openMenu === 'file' ? (
             <div className="menu__dropdown" role="menu" aria-label={t('menu.file.aria')}>
@@ -256,7 +341,7 @@ export function Toolbar({
               if (openMenu) setOpenMenu('edit')
             }}
           >
-            {t('menu.edit')}
+            {renderMnemonic(t('menu.edit'))}
           </button>
           {openMenu === 'edit' ? (
             <div className="menu__dropdown" role="menu" aria-label={t('menu.edit.aria')}>
@@ -369,7 +454,7 @@ export function Toolbar({
               if (openMenu) setOpenMenu('view')
             }}
           >
-            {t('menu.view')}
+            {renderMnemonic(t('menu.view'))}
           </button>
           {openMenu === 'view' ? (
             <div className="menu__dropdown" role="menu" aria-label={t('menu.view.aria')}>
@@ -524,7 +609,7 @@ export function Toolbar({
               if (openMenu) setOpenMenu('help')
             }}
           >
-            {t('menu.help')}
+            {renderMnemonic(t('menu.help'))}
           </button>
           {openMenu === 'help' ? (
             <div className="menu__dropdown" role="menu" aria-label={t('menu.help.aria')}>
