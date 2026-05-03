@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { getCurrentWindow } from '@tauri-apps/api/window'
 import { X, Minus, Square, Copy } from 'lucide-react'
 import { isTauri } from '@tauri-apps/api/core'
 import { useI18n } from '../i18n'

@@ -1,6 +1,6 @@
 [package]
 name = "edit-md"
-version = "0.1.2"
+version = "1.0.0"
 description = "Windows desktop markdown editor"
 authors = ["edit-md"]
 edition = "2021"

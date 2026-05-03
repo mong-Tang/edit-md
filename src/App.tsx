@@ -972,9 +972,10 @@ export function App() {
             <div className="pane__header">{t('app.startPaneHeader')}</div>
             <div className="preview">
               <StartScreen
-                canHideGuide={true}
-                hideGuide={hideStartGuide}
-                onHideGuideChange={handleStartGuidePreference}
+                onNewFile={handleNewFile}
+                onOpen={handleOpen}
+                recentFiles={recentFiles}
+                onRecentFileSelect={handleRecentFileSelect}
               />
             </div>
           </section>
