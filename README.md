@@ -73,16 +73,30 @@ npm run dev
 npm run build
 ```
 
-## 앱 빌드
+## 데스크톱 앱 빌드
+
+### 1. 무설치 포터블 버전 빌드 (Zip 압축팩 - 사용자 선호 권장)
+설치 과정과 관리자 권한 요구 없이 압축만 풀면 다운로드 즉시 실행되는 휴대용 무설치 버전(Portable Zip)을 제작합니다. NSIS 인스톨러 패키징 과정을 생략하므로 빌드 속도가 대단히 빠릅니다.
 
 ```bash
-cmd.exe /c ".\\node_modules\\.bin\\tauri.cmd build"
+npm run build:portable
 ```
 
-대표 결과물:
-
+**대표 결과물 (Zip 압축본):**
 ```text
-src-tauri\target\release\bundle\nsis\mongTang-md_0.1.2_x64-setup.exe
+src-tauri\target\release\mongTang-md_portable.zip
+```
+
+### 2. 설치본 패키지 빌드 (NSIS Installer)
+사용자 컴퓨터에 설치 프로그램 형식(`.exe`)으로 앱을 인스톨하고 파일 확장자(`md`, `markdown`, `txt`) 연결을 자동으로 수행하는 윈도우 인스톨러 설치본을 제작합니다.
+
+```bash
+npm run tauri build
+```
+
+**대표 결과물 (설치 파일 .exe):**
+```text
+src-tauri\target\release\bundle\nsis\mongTang-md_1.1.0_x64-setup.exe
 ```
 
 ## 프로젝트 구조
