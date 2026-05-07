@@ -502,8 +502,15 @@ export function App() {
       
       let combinedText = ''
       if (changelogVer && historyVer && compareVersions(changelogVer, historyVer) > 0) {
+        // 병합 시 changelogText 하단에 적힌 불필요한 '이전 이력 가기' 안내 링크 제거
+        let cleanChangelog = changelogText
+        const lastSeparatorIndex = changelogText.lastIndexOf('\n---')
+        if (lastSeparatorIndex !== -1) {
+          cleanChangelog = changelogText.substring(0, lastSeparatorIndex).trim()
+        }
+
         // If changelog version is higher than history version, automatically prepends changelog!
-        combinedText = changelogText + '\n\n---\n\n' + historyText
+        combinedText = cleanChangelog + '\n\n---\n\n' + historyText
       } else {
         // Otherwise, just show historyText
         combinedText = historyText
