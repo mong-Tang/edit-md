@@ -40,6 +40,7 @@ export function TitleBar() {
     <div 
       className="titlebar" 
       onMouseDown={handleMouseDown}
+      onDoubleClick={handleMaximize}
     >
       <div className="titlebar__left">
         <div className="titlebar__logo">M</div>

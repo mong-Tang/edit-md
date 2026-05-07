@@ -259,7 +259,7 @@ export function Toolbar({
   }
 
   return (
-    <header className="toolbar" ref={rootRef} onMouseDown={handleMouseDown}>
+    <header className="toolbar" ref={rootRef} onMouseDown={handleMouseDown} onDoubleClick={handleMaximize}>
       <div className="menu-bar" role="menubar" aria-label={t('menu.top.aria')} onMouseDown={(e) => e.stopPropagation()}>
         <div className="toolbar__brand" style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '10px', paddingRight: '12px', borderRight: '1px solid var(--border)', marginRight: '6px', height: '20px', userSelect: 'none' }}>
           <div className="titlebar__logo" style={{ cursor: 'default', width: '18px', height: '18px', fontSize: '11px', borderRadius: '4px' }}>M</div>
