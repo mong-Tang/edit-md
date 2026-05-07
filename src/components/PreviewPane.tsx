@@ -60,6 +60,59 @@ function resolveLocalPath(href: string, currentFilePath?: string | null) {
   return null
 }
 
+function getTextFromChildren(children: any): string {
+  if (typeof children === 'string') return children
+  if (typeof children === 'number') return String(children)
+  if (Array.isArray(children)) {
+    return children.map(getTextFromChildren).join('')
+  }
+  if (children && children.props && children.props.children) {
+    return getTextFromChildren(children.props.children)
+  }
+  return ''
+}
+
+function remarkHighlight() {
+  return (tree: any) => {
+    const visit = (node: any) => {
+      if (node.children) {
+        const newChildren: any[] = []
+        for (const child of node.children) {
+          if (child.type === 'text' && child.value.includes('==')) {
+            const regex = /==([^=\n]+)==/g
+            let match
+            let lastIndex = 0
+            const text = child.value
+            while ((match = regex.exec(text)) !== null) {
+              const before = text.substring(lastIndex, match.index)
+              if (before) {
+                newChildren.push({ type: 'text', value: before })
+              }
+              newChildren.push({
+                type: 'emphasis',
+                data: { hName: 'mark' },
+                children: [{ type: 'text', value: match[1] }]
+              })
+              lastIndex = regex.lastIndex
+            }
+            const after = text.substring(lastIndex)
+            if (after) {
+              newChildren.push({ type: 'text', value: after })
+            }
+          } else {
+            newChildren.push(child)
+            if (child.children) {
+              visit(child)
+            }
+          }
+        }
+        node.children = newChildren
+      }
+    }
+    visit(tree)
+  }
+}
+
 export function PreviewPane({ currentFilePath, markdown, previewRef }: PreviewPaneProps) {
   const { t } = useI18n()
 
@@ -129,7 +182,7 @@ export function PreviewPane({ currentFilePath, markdown, previewRef }: PreviewPa
       <div className="pane__header">{t('preview.header')}</div>
       <div className="preview markdown-body" ref={previewRef}>
         <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
+          remarkPlugins={[remarkGfm, remarkHighlight]}
           components={{
             a(props) {
               const { children, href, node, ref, ...rest } = props
@@ -153,11 +206,15 @@ export function PreviewPane({ currentFilePath, markdown, previewRef }: PreviewPa
               const { children, className, node, ref, ...rest } = props
               void node
               void ref
+              const codeString = getTextFromChildren(children)
+              const code = codeString.replace(/\n$/, '')
               const match = /language-(\w+)/.exec(className || '')
-              const code = String(children).replace(/\n$/, '')
               const isDark = document.documentElement.dataset.theme === 'dark'
+              const isBlock = (className && className.startsWith('language-'))
+                ? true
+                : codeString.includes('\n')
 
-              if (!match) {
+              if (!match && !isBlock) {
                 return (
                   <code className={className} {...rest}>
                     {children}
@@ -165,10 +222,12 @@ export function PreviewPane({ currentFilePath, markdown, previewRef }: PreviewPa
                 )
               }
 
+              const language = match ? match[1] : 'text'
+
               return (
                 <SyntaxHighlighter
                   {...rest}
-                  language={match[1]}
+                  language={language}
                   PreTag="div"
                   style={isDark ? oneDark : oneLight}
                 >

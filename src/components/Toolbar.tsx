@@ -59,6 +59,7 @@ type ToolbarProps = {
   onThemeChange: (theme: ThemeMode) => void
   onIndentSizeChange: (size: 2 | 4 | 8) => void
   onUndo: () => void
+  onEmojiClick: () => void
   hideStartGuide: boolean
   hasSelection: boolean
   canPaste: boolean
@@ -95,6 +96,7 @@ export function Toolbar({
   onThemeChange,
   onIndentSizeChange,
   onUndo,
+  onEmojiClick,
   hideStartGuide,
   hasSelection,
   canPaste,
@@ -104,6 +106,34 @@ export function Toolbar({
   const isDesktopRuntime = isTauri()
   const [openMenu, setOpenMenu] = useState<MenuKey>(null)
   const [focusedItemIndex, setFocusedItemIndex] = useState<number>(-1)
+  const [appWindow, setAppWindow] = useState<any>(null)
+
+  useEffect(() => {
+    if (isTauri()) {
+      import('@tauri-apps/api/window').then((mod) => {
+        setAppWindow(mod.getCurrentWindow())
+      })
+    }
+  }, [])
+
+  const handleMouseDown = async (e: React.MouseEvent) => {
+    if (e.buttons === 1 && appWindow) {
+      await appWindow.startDragging()
+    }
+  }
+
+  const handleMinimize = () => appWindow?.minimize()
+  const handleMaximize = async () => {
+    if (appWindow) {
+      try {
+        await appWindow.toggleMaximize()
+      } catch (err) {
+        console.error('Failed to toggle maximize:', err)
+      }
+    }
+  }
+  const handleClose = () => appWindow?.close()
+
   const rootRef = useRef<HTMLElement | null>(null)
 
   const menuOrder: Exclude<MenuKey, null>[] = ['file', 'edit', 'view', 'help']
@@ -227,8 +257,12 @@ export function Toolbar({
   }
 
   return (
-    <header className="toolbar" ref={rootRef}>
-      <div className="menu-bar" role="menubar" aria-label={t('menu.top.aria')}>
+    <header className="toolbar" ref={rootRef} onMouseDown={handleMouseDown}>
+      <div className="menu-bar" role="menubar" aria-label={t('menu.top.aria')} onMouseDown={(e) => e.stopPropagation()}>
+        <div className="toolbar__brand" style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '10px', paddingRight: '12px', borderRight: '1px solid var(--border)', marginRight: '6px', height: '20px', userSelect: 'none' }}>
+          <div className="titlebar__logo" style={{ cursor: 'default', width: '18px', height: '18px', fontSize: '11px', borderRadius: '4px' }}>M</div>
+          <span className="titlebar__title" style={{ fontWeight: 800, fontSize: '12px', cursor: 'default', letterSpacing: '-0.02em' }}>mongTang</span>
+        </div>
         <div className="menu">
           <button
             type="button"
@@ -349,9 +383,7 @@ export function Toolbar({
                 type="button"
                 className="menu__item"
                 role="menuitem"
-                onClick={() => {
-                  // Emoji picker placeholder
-                }}
+                onClick={() => runMenuAction(onEmojiClick)}
               >
                 <Smile size={16} aria-hidden="true" />
                 <span className="menu__item-label">{t('menu.edit.emoji')}</span>
@@ -636,6 +668,33 @@ export function Toolbar({
             </div>
           ) : null}
         </div>
+      </div>
+
+      <div className="toolbar__window-controls" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingRight: '14px', height: '100%', userSelect: 'none' }}>
+        <button
+          type="button"
+          onClick={handleMinimize}
+          style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#febc2e', border: '1px solid rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'opacity 0.2s', padding: 0 }}
+          title="Minimize"
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8' }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
+        />
+        <button
+          type="button"
+          onClick={handleMaximize}
+          style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', border: '1px solid rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'opacity 0.2s', padding: 0 }}
+          title="Maximize"
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8' }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
+        />
+        <button
+          type="button"
+          onClick={handleClose}
+          style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', border: '1px solid rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'opacity 0.2s', padding: 0 }}
+          title="Close"
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8' }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
+        />
       </div>
     </header>
   )

@@ -306,18 +306,82 @@ export function EditorPane({
             onSelectionChange?.(textarea.selectionStart !== textarea.selectionEnd)
           }}
           onPaste={(event) => {
+            // 1단계: clipboardData.items 내부의 숨겨진 바이너리 파일 캡처 (가장 안전하고 강인함)
+            const items = event.clipboardData.items
+            for (let i = 0; i < items.length; i++) {
+              const item = items[i]
+              if (item.kind === 'file' && item.type.startsWith('image/')) {
+                const file = item.getAsFile()
+                if (file) {
+                  event.preventDefault()
+                  const reader = new FileReader()
+                  reader.onload = (e) => {
+                    const base64Data = e.target?.result as string
+                    if (!base64Data) return
+
+                    const textarea = event.currentTarget
+                    const { selectionStart, selectionEnd, value } = textarea
+                    
+                    const isGif = file.type === 'image/gif' || file.name.endsWith('.gif')
+                    const imgTag = isGif ? `![gif](${base64Data})` : `![image](${base64Data})`
+                    
+                    const nextValue = value.slice(0, selectionStart) + imgTag + value.slice(selectionEnd)
+                    const nextCursor = selectionStart + imgTag.length
+
+                    onChange(nextValue)
+                    
+                    window.requestAnimationFrame(() => {
+                      textarea.focus()
+                      textarea.setSelectionRange(nextCursor, nextCursor)
+                    })
+                  }
+                  reader.readAsDataURL(file)
+                  return
+                }
+              }
+            }
+
+            // 2단계: HTML 스니펫에서 이미지 주소(Tenor 등) 정규식 색출
+            const html = event.clipboardData.getData('text/html')
+            if (html) {
+              const match = html.match(/<img[^>]+src="([^">]+\.gif[^">]*)"/i) || html.match(/<img[^>]+src="([^">]+)"/i)
+              if (match && match[1]) {
+                event.preventDefault()
+                const url = match[1]
+                const textarea = event.currentTarget
+                const { selectionStart, selectionEnd, value } = textarea
+                
+                const imgTag = `![gif](${url})`
+                const nextValue = value.slice(0, selectionStart) + imgTag + value.slice(selectionEnd)
+                const nextCursor = selectionStart + imgTag.length
+
+                onChange(nextValue)
+                
+                window.requestAnimationFrame(() => {
+                  textarea.focus()
+                  textarea.setSelectionRange(nextCursor, nextCursor)
+                })
+                return
+              }
+            }
+
+            // 3단계: 일반 텍스트 붙여넣기 및 단일 GIF/Tenor 주소 자동 마크다운 이미지화
             const pastedText = event.clipboardData.getData('text')
             if (!pastedText) return
 
             event.preventDefault()
             const textarea = event.currentTarget
             const { selectionStart, selectionEnd, value } = textarea
-            const nextValue = value.slice(0, selectionStart) + pastedText + value.slice(selectionEnd)
-            const nextCursor = selectionStart + pastedText.length
+
+            // 단일 GIF 주소 또는 Tenor 링크를 붙여넣을 경우 자동으로 마크다운 이미지 문법으로 광속 치환!
+            const isSingleGifUrl = /^https?:\/\/[^\s]+(\.gif|\/gif)[^\s]*$/i.test(pastedText.trim()) || pastedText.trim().includes('tenor.com')
+            const insertContent = isSingleGifUrl ? `![gif](${pastedText.trim()})` : pastedText
+
+            const nextValue = value.slice(0, selectionStart) + insertContent + value.slice(selectionEnd)
+            const nextCursor = selectionStart + insertContent.length
 
             onChange(nextValue)
             
-            // 커서 위치 업데이트를 다음 프레임으로 예약
             window.requestAnimationFrame(() => {
               textarea.setSelectionRange(nextCursor, nextCursor)
             })

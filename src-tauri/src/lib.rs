@@ -29,6 +29,30 @@ fn take_pending_open_files(state: tauri::State<'_, PendingOpenFiles>) -> Vec<Str
     files
 }
 
+#[tauri::command]
+fn open_emoji_panel() {
+    #[cfg(target_os = "windows")]
+    {
+        extern "system" {
+            fn keybd_event(b_vk: u8, b_scan: u8, dw_flags: u32, dw_extra_info: usize);
+        }
+        unsafe {
+            keybd_event(0x5B, 0, 0, 0); // LWin down
+            keybd_event(0xBE, 0, 0, 0); // Period down
+            keybd_event(0xBE, 0, 2, 0); // Period up
+            keybd_event(0x5B, 0, 2, 0); // LWin up
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        let _ = Command::new("osascript")
+            .args(&["-e", "tell application \"System Events\" to keystroke \" \" using {control down, command down}"])
+            .spawn();
+    }
+}
+
 fn focus_main_window<R: Runtime>(app: &tauri::AppHandle<R>) {
     if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
         let _ = window.show();
@@ -159,7 +183,7 @@ pub fn run() {
             }
         })
         .manage(PendingOpenFiles::default())
-        .invoke_handler(tauri::generate_handler![take_pending_open_files])
+        .invoke_handler(tauri::generate_handler![take_pending_open_files, open_emoji_panel])
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             let cwd_path = PathBuf::from(cwd);
             let files = collect_open_file_paths(&args, &cwd_path);
@@ -170,6 +194,9 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .setup(move |app| {
+            #[cfg(desktop)]
+            let _ = app.remove_menu();
+
             create_splash_window(&app.handle())?;
             let files = collect_open_file_paths(&startup_args, &startup_cwd);
             queue_open_files(&app.handle(), files);

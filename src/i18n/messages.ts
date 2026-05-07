@@ -102,10 +102,11 @@ export const messages = {
     'start.exampleTitle': 'Markdown Example',
     'start.exampleFence': '```md',
     'start.exampleCode':
-      '# edit-md\n- Supports headings/lists/links\n- Plain-text friendly for version control\n\n[Official Guide](https://www.markdownguide.org)',
+      '# mongTang.md Editor\n\n## Key Features\n- **Live Preview** support in real-time\n- **==Highlighting==** & GFM Markdown\n- **Premium code blocks** with auto-scroll\n- **PDF & HTML** export capabilities\n\n[Official Markdown Guide](https://www.markdownguide.org)',
     'start.hideGuideLabel': "Don't show this guide next time.",
     'status.contextMenu.disabled': 'Editor right-click menu is disabled.',
     'status.contextMenu.enabled': 'Editor right-click menu is enabled.',
+    'status.edit.emojiHint': 'Press [ Win + . ] or Mac [ Cmd + Ctrl + Space ] to open the Emoji panel.',
     'status.exit.cancelled': 'App exit cancelled.',
     'status.exit.failed': 'Failed to exit app: {reason}',
     'status.exportHtml.cancelled': 'HTML export cancelled.',
@@ -273,11 +274,12 @@ export const messages = {
     'start.exampleTitle': 'Markdown Example',
     'start.exampleFence': '```md',
     'start.exampleCode':
-      '# edit-md\n- 제목/목록/링크 문법 지원\n- 일반 텍스트 기반으로 버전관리 용이\n\n[공식 가이드](https://www.markdownguide.org)',
+      '# 몽땅.엠디 (mongTang.md)\n\n## 주요 기능 (Core Features)\n- **실시간 미리보기** 지원 (Live Preview)\n- **==형광펜 강조==** 및 GFM 마크다운 지원\n- **세련된 코드 블록** 및 자동 가로 스크롤 가둠\n- **PDF 및 HTML** 포맷 내보내기 기능 제공\n- **편리한 단축키**와 강력한 환경 설정 제공\n\n[공식 마크다운 가이드](https://www.markdownguide.org)',
     'start.hideGuideLabel': '다음엔 안내문이 뜨지 않습니다.',
     'status.contextMenu.disabled':
       '편집창 우클릭 메뉴를 비활성화했습니다. 편집 메뉴는 계속 사용할 수 있습니다.',
     'status.contextMenu.enabled': '편집창 우클릭 메뉴를 활성화했습니다.',
+    'status.edit.emojiHint': '이모지 입력창을 열려면 단축키 [ Win + . ] 또는 Mac [ Cmd + Ctrl + Space ] 를 누르세요.',
     'status.exit.cancelled': '앱 종료를 취소했습니다.',
     'status.exit.failed': '앱 종료에 실패했습니다: {reason}',
     'status.exportHtml.cancelled': 'HTML 내보내기를 취소했습니다.',

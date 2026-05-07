@@ -1,6 +1,7 @@
 import { useI18n } from '../i18n'
 import type { RecentFileEntry } from '../types/recentFile'
 import { FilePlus, FolderOpen, History, FileText } from 'lucide-react'
+import { openUrl } from '@tauri-apps/plugin-opener'
 
 type StartScreenProps = {
   onNewFile: () => void
@@ -17,6 +18,40 @@ export function StartScreen({
 }: StartScreenProps) {
   const { t } = useI18n()
 
+  const handleLinkClick = async (url: string) => {
+    try {
+      await openUrl(url)
+    } catch {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+  }
+
+  const renderExampleCode = (text: string) => {
+    const parts = text.split(/(\[[^\]]+\]\([^)]+\))/)
+    return parts.map((part, index) => {
+      const match = part.match(/\[([^\]]+)\]\(([^)]+)\)/)
+      if (match) {
+        const [, label, url] = match
+        return (
+          <span
+            key={index}
+            onClick={() => void handleLinkClick(url)}
+            className="start-screen__mdlink"
+            style={{
+              color: 'var(--accent, #6366f1)',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            [{label}]({url})
+          </span>
+        )
+      }
+      return part
+    })
+  }
+
   return (
     <section className="start-screen" aria-label={t('start.aria')}>
       <div className="start-screen__grid">
@@ -27,7 +62,6 @@ export function StartScreen({
             {t('start.title')}
           </h1>
           <p className="start-screen__desc">
-            <span className="start-screen__label">{t('start.label.body')}</span>
             {t('start.body')}
           </p>
           <div className="start-screen__mdbox" aria-hidden="true">
@@ -35,21 +69,21 @@ export function StartScreen({
               <span>{t('start.exampleTitle')}</span>
               <span>{t('start.exampleFence')}</span>
             </div>
-            <pre className="start-screen__mdcode">{t('start.exampleCode')}</pre>
+            <pre className="start-screen__mdcode">{renderExampleCode(t('start.exampleCode'))}</pre>
           </div>
         </div>
 
         {/* 오른쪽: 액션 및 최근 파일 */}
         <div className="start-screen__actions">
           <div className="start-screen__section">
-            <h2 className="start-screen__section-title">{t('start.label.pros')}</h2>
+            <h2 className="start-screen__section-title">{t('status.file')}</h2>
             <div className="start-screen__buttons">
               <button className="start-screen__action-btn" onClick={onNewFile}>
-                <FilePlus size={20} />
+                <FilePlus size={30} />
                 <span>{t('menu.file.new')}</span>
               </button>
               <button className="start-screen__action-btn" onClick={onOpen}>
-                <FolderOpen size={20} />
+                <FolderOpen size={30} />
                 <span>{t('menu.file.open')}</span>
               </button>
             </div>

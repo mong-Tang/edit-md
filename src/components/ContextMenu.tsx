@@ -21,6 +21,7 @@ type ContextMenuProps = {
   onCopy: () => void
   onPaste: () => void
   onSelectAll: () => void
+  onEmojiClick: () => void
   canUndo: boolean
   canRedo: boolean
   hasOpenFiles: boolean
@@ -38,6 +39,7 @@ export function ContextMenu({
   onCopy,
   onPaste,
   onSelectAll,
+  onEmojiClick,
   canUndo,
   canRedo,
   hasOpenFiles,
@@ -105,7 +107,7 @@ export function ContextMenu({
         className="menu__item"
         disabled={!hasOpenFiles}
         onClick={() => {
-          // 이모지 피커 (시스템 단축키 안내 위주)
+          onEmojiClick();
           onClose();
         }}
       >

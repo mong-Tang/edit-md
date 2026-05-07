@@ -527,6 +527,13 @@ html, body, #app {
   line-height: 1.65; /* 줄 간격 통일 */
 }
 
+.preview--start {
+  padding: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
 .preview h1 { margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
 .preview h2 { margin: 1.5rem 0 0.8rem; }
 .preview p { margin-bottom: 1rem; }
@@ -600,19 +607,19 @@ html, body, #app {
 .start-screen {
   display: grid;
   place-items: center;
-  height: 100%;
+  flex: 1;
+  width: 100%;
   padding: 2rem;
 }
 
 .start-screen__card {
   width: 100%;
   max-width: 600px;
-  padding: 40px;
-  background: var(--panel);
-  border-radius: 24px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .start-screen__brand {
@@ -652,16 +659,25 @@ html, body, #app {
 .start-screen__grid {
   display: grid;
   grid-template-columns: 1fr 1.2fr;
-  gap: 2.5rem;
-  max-width: 900px;
+  gap: 3.5rem;
+  max-width: 1000px;
   width: 100%;
+  padding: 48px;
+  background: var(--panel-muted);
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden; /* 밖으로 삐져나가는 모든 자식 요소 철저 차단 */
+  min-width: 0; /* 가로 축 축소 허용으로 생략 트리거 */
 }
 
 .start-screen__actions {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  padding: 0.5rem;
+  gap: 1.25rem;
+  min-width: 0; /* 가로 축 축소 허용으로 내부 최근 파일 경로 생략 정상 작동 */
+  margin-top: -15px; /* 전체 대칭 중 우측 파일 조작부(2번)만 우아하게 15px 위로 전격 인상 */
 }
 
 .start-screen__section-title {
@@ -707,17 +723,18 @@ html, body, #app {
 .start-screen__recent-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  max-height: 300px;
+  gap: 0.3rem;
+  max-height: 220px; /* 좌측 영문 예제 2줄 슬리밍에 정합되도록 최근 파일 높이를 80px(2개분) 단축하여 대칭 완성 */
   overflow-y: auto;
   padding-right: 0.5rem;
+  min-width: 0;
 }
 
 .start-screen__recent-item {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.75rem 1rem;
+  padding: 0.45rem 0.85rem;
   background: var(--surface-light);
   border: 1px solid transparent;
   border-radius: 8px;
@@ -770,7 +787,7 @@ html, body, #app {
 
 .start-screen__mdbox {
   margin: 24px 0;
-  background: var(--bg);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
@@ -1042,4 +1059,61 @@ html, body, #app {
   background-color: var(--border);
   border: none;
   margin: 2em 0;
+}
+
+/* Premium Inline Code and Code Block Styling */
+.markdown-body code:not(pre code) {
+  background-color: rgba(244, 63, 94, 0.08); /* Soft Rose-Pink Glow */
+  color: #f43f5e; /* Rose 500 */
+  border: 1px solid rgba(244, 63, 94, 0.15);
+  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.875em;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+:root[data-theme='dark'] .markdown-body code:not(pre code) {
+  background-color: rgba(251, 113, 133, 0.12); /* Vibrant Rose-Pink Glow in Dark Mode */
+  color: #fda4af; /* Rose 300 */
+  border-color: rgba(251, 113, 133, 0.22);
+}
+
+.markdown-body pre {
+  margin: 1.25em 0;
+  border-radius: 10px;
+  overflow: hidden !important;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  background-color: var(--panel-muted);
+  max-width: 100% !important;
+}
+
+.markdown-body pre div {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  padding: 1.25rem !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: 0.9em !important;
+  line-height: 1.6 !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+}
+
+/* Premium Pastel-Yellow Highlighter Styling */
+.markdown-body mark {
+  background-color: rgba(254, 240, 138, 0.35); /* Elegant Pastel Yellow Highlighter Glow */
+  color: #854d0e; /* Deep Yellow-Gold 800 for high contrast reading */
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  font-weight: 600;
+  border-bottom: 2px solid rgba(254, 240, 138, 0.85);
+  margin: 0 0.1em;
+}
+
+:root[data-theme='dark'] .markdown-body mark {
+  background-color: rgba(254, 240, 138, 0.18); /* Soft Dark Mode Yellow Glow */
+  color: #fef08a; /* Comfortable Soft Yellow 200 */
+  border-bottom-color: rgba(254, 240, 138, 0.5);
 }

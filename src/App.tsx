@@ -1,5 +1,4 @@
-import { TitleBar } from './components/TitleBar'
-import { isTauri } from '@tauri-apps/api/core'
+import { isTauri, invoke } from '@tauri-apps/api/core'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { DocumentTabs } from './components/DocumentTabs'
@@ -77,7 +76,14 @@ export function App() {
   const isDesktopRuntime = isTauri()
   const [statusMessage, setStatusMessage] = useState<StatusState>({ key: 'status.ready' })
   const [allowEditorContextMenu, setAllowEditorContextMenu] = useState(true)
-  const [isStartScreen, setIsStartScreen] = useState(true)
+  const [isStartScreen, setIsStartScreen] = useState(() => {
+    if (typeof window === 'undefined') return true
+    try {
+      return window.localStorage.getItem(START_GUIDE_HIDDEN_KEY) !== '1'
+    } catch {
+      return true
+    }
+  })
   const [hideStartGuide, setHideStartGuide] = useState<boolean>(() => {
     if (isTauri()) return false
     if (typeof window === 'undefined') return false
@@ -163,10 +169,14 @@ export function App() {
   }, [])
 
   const handleGlobalContextMenu = useCallback((e: React.MouseEvent) => {
-    // 우클릭 메뉴 비활성화 상태면 커스텀 메뉴를 띄우지 않음
-    if (!allowEditorContextMenu) return
-
+    // 브라우저 기본 우클릭 메뉴는 무슨 일이 있어도 무조건 원천 방지!
     e.preventDefault()
+
+    // 미리보기 창(.preview-pane) 안에서의 우클릭인지 지능적으로 검출
+    const isInsidePreview = (e.target as HTMLElement).closest('.preview-pane') !== null
+
+    // 에디터 우클릭 옵션이 꺼져 있거나, 시작 화면(StartScreen) 상태거나, 미리보기 창(.preview-pane) 영역 안에서의 우클릭이면 커스텀 에디터 메뉴도 띄우지 않고 종료
+    if (!allowEditorContextMenu || isStartScreen || isInsidePreview) return
 
     if (isTauri()) {
       // 데스크톱 앱에서는 클립보드 체크 후 메뉴 표시
@@ -178,7 +188,7 @@ export function App() {
       setCanPaste(true)
       setContextMenu({ x: e.clientX, y: e.clientY })
     }
-  }, [allowEditorContextMenu, checkClipboard])
+  }, [allowEditorContextMenu, isStartScreen, checkClipboard])
 
   const handleUndo = useCallback(() => {
     undo()
@@ -191,6 +201,7 @@ export function App() {
   const handleStartGuidePreference = useCallback(
     (next: boolean) => {
       setHideStartGuide(next)
+      setIsStartScreen(!next)
       if (typeof window !== 'undefined') {
         try {
           window.localStorage.setItem(START_GUIDE_HIDDEN_KEY, next ? '1' : '0')
@@ -595,11 +606,53 @@ export function App() {
 
   const handleCut = () => runEditorCommand('cut')
   const handleCopy = () => runEditorCommand('copy')
-  const handlePaste = () => runEditorCommand('paste')
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (!text) return
+
+      const textarea = editorRef.current
+      if (!textarea) {
+        runEditorCommand('paste')
+        return
+      }
+
+      const { selectionStart, selectionEnd, value } = textarea
+      const nextValue = value.slice(0, selectionStart) + text + value.slice(selectionEnd)
+      const nextCursor = selectionStart + text.length
+
+      // 붙여넣기 전의 에디터 자체 스크롤 높이를 그대로 기억
+      const originalScrollTop = textarea.scrollTop
+      const originalScrollLeft = textarea.scrollLeft
+
+      updateMarkdown(nextValue)
+
+      window.requestAnimationFrame(() => {
+        // preventScroll 옵션을 주어 뷰포트나 화면 전체가 툭 튀며 흔들리는 이탈 버그를 원천 봉쇄!
+        textarea.focus({ preventScroll: true })
+        textarea.setSelectionRange(nextCursor, nextCursor)
+        
+        // 에디터 내부의 스크롤 위치도 정확하게 복원하여 칼정렬 유지
+        textarea.scrollTop = originalScrollTop
+        textarea.scrollLeft = originalScrollLeft
+      })
+    } catch (error) {
+      console.warn('[App] handlePaste failed, falling back to execCommand', error)
+      runEditorCommand('paste')
+    }
+  }
 
   const handleSelectAll = () => {
     const editor = focusEditor()
     editor?.select()
+  }
+
+  const handleEmojiClick = () => {
+    setStatus('status.edit.emojiHint')
+    focusEditor()
+    if (isTauri()) {
+      void invoke('open_emoji_panel')
+    }
   }
 
   const handleToggleEditorContextMenu = () => {
@@ -781,18 +834,52 @@ export function App() {
 
       const key = event.key.toLowerCase()
 
+      // 1. 실행 취소 (Ctrl + Z)
+      if (key === 'z') {
+        if (tabs.length > 0 && !isStartScreen) {
+          event.preventDefault()
+          if (event.shiftKey) {
+            handleRedo()
+          } else {
+            handleUndo()
+          }
+          return
+        }
+      }
+
+      // 2. 다시 실행 (Ctrl + Y)
+      if (key === 'y') {
+        if (tabs.length > 0 && !isStartScreen) {
+          event.preventDefault()
+          handleRedo()
+          return
+        }
+      }
+
+      // 3. 모두 선택 (Ctrl + A)
+      if (key === 'a') {
+        if (tabs.length > 0 && !isStartScreen) {
+          event.preventDefault()
+          handleSelectAll()
+          return
+        }
+      }
+
+      // 4. 새 파일 생성 (Ctrl + N)
       if (key === 'n') {
         event.preventDefault()
         handleNewFile()
         return
       }
 
+      // 5. 파일 열기 (Ctrl + O)
       if (key === 'o') {
         event.preventDefault()
         void handleOpen()
         return
       }
 
+      // 6. 파일 저장 (Ctrl + S)
       if (key === 's') {
         event.preventDefault()
         void handleSave()
@@ -805,12 +892,14 @@ export function App() {
         return
       }
 
+      // 7. 현재 탭 닫기 (Ctrl + W)
       if (key === 'w') {
         event.preventDefault()
         void handleCloseCurrentTab()
         return
       }
 
+      // 8. 앱 종료 (Ctrl + Q)
       if (key === 'q') {
         event.preventDefault()
         void handleExit()
@@ -819,7 +908,7 @@ export function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [activeTabId, isStartScreen, markdown, fileName, currentFile, tabs])
+  }, [activeTabId, isStartScreen, markdown, fileName, currentFile, tabs, handleUndo, handleRedo, handleSelectAll])
 
   useEffect(() => {
     if (isStartScreen) return
@@ -900,7 +989,6 @@ export function App() {
   return (
     <div className="app-shell" onContextMenu={handleGlobalContextMenu}>
       <header className="app-header">
-        <TitleBar />
         <Toolbar
           allowEditorContextMenu={allowEditorContextMenu}
           canRedo={canRedo}
@@ -938,6 +1026,7 @@ export function App() {
           onThemeChange={setThemeMode}
           onToggleEditorContextMenu={handleToggleEditorContextMenu}
           onUndo={handleUndo}
+          onEmojiClick={handleEmojiClick}
           recentFiles={recentFiles}
           hideStartGuide={hideStartGuide}
           hasSelection={hasSelection}
@@ -970,7 +1059,7 @@ export function App() {
         {isStartScreen ? (
           <section className="pane preview-pane">
             <div className="pane__header">{t('app.startPaneHeader')}</div>
-            <div className="preview">
+            <div className="preview preview--start">
               <StartScreen
                 onNewFile={handleNewFile}
                 onOpen={handleOpen}
@@ -1094,6 +1183,7 @@ export function App() {
           onRedo={handleRedo}
           onSelectAll={handleSelectAll}
           onUndo={handleUndo}
+          onEmojiClick={handleEmojiClick}
           hasSelection={hasSelection}
           canPaste={canPaste}
         />
