@@ -35,8 +35,8 @@
             "nsis": {
                 "displayLanguageSelector": true,
                 "languages": [
-                    "ko-KR",
-                    "en-US"
+                    "Korean",
+                    "English"
                 ],
                 "installMode": "perMachine",
                 "installerHooks": "nsis/installer.nsh"
