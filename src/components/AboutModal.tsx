@@ -10,6 +10,8 @@ type AboutModalProps = {
   onOpenExternal: (url: string) => void
   onPrimaryAction?: (() => void) | null
   primaryLabel?: string | null
+  onHistoryAction?: (() => void) | null
+  historyLabel?: string | null
 }
 
 export function AboutModal({
@@ -21,6 +23,8 @@ export function AboutModal({
   onOpenExternal,
   onPrimaryAction = null,
   primaryLabel = null,
+  onHistoryAction = null,
+  historyLabel = null,
 }: AboutModalProps) {
   const { t } = useI18n()
   const websiteUrl = 'https://mongtang-ai.vercel.app'
@@ -60,7 +64,7 @@ export function AboutModal({
               if (line.startsWith('- ')) {
                 return (
                   <li key={`${line}-${index}`} className="about-modal__list-item">
-                    {line.replace('- ', '')}
+                     {line.replace('- ', '')}
                   </li>
                 )
               }
@@ -99,6 +103,18 @@ export function AboutModal({
           </>
         )}
         <div className="about-modal__actions">
+          {onHistoryAction && historyLabel && (
+            <button 
+              type="button" 
+              className="about-modal__button--secondary"
+              style={{ marginRight: 'auto' }}
+              onClick={() => {
+                onHistoryAction() 
+              }}
+            >
+              {historyLabel}
+            </button>
+          )}
           {onPrimaryAction && primaryLabel && (
             <button 
               type="button" 

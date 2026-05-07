@@ -53,6 +53,7 @@ type ToolbarProps = {
   onSave: () => void
   onSaveAs: () => void
   onShowVersionInfo: () => void
+  onShowHistory: () => void
   onSelectAll: () => void
   onToggleEditorContextMenu: () => void
   onShowStartGuide: () => void
@@ -90,6 +91,7 @@ export function Toolbar({
   onSave,
   onSaveAs,
   onShowVersionInfo,
+  onShowHistory,
   onSelectAll,
   onToggleEditorContextMenu,
   onShowStartGuide,
@@ -664,6 +666,10 @@ export function Toolbar({
               <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onShowVersionInfo)}>
                 <Info size={16} aria-hidden="true" />
                 <span className="menu__item-label">{t('menu.help.versionInfo')}</span>
+              </button>
+              <button type="button" className="menu__item" role="menuitem" onClick={() => runMenuAction(onShowHistory)}>
+                <Clock size={16} aria-hidden="true" />
+                <span className="menu__item-label">{t('menu.help.viewHistory')}</span>
               </button>
             </div>
           ) : null}

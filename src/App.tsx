@@ -475,40 +475,58 @@ export function App() {
     return () => window.clearTimeout(timerId)
   }, [isStartScreen, activeTabId])
 
-  // '이전 내역(History) 전체 보기' 마크다운 클릭 감지 동적 병합 리스너
-  useEffect(() => {
-    const handleOpenHistory = async () => {
-      try {
-        const [changelogRes, historyRes] = await Promise.all([
-          fetch('/changelog.md'),
-          fetch('/history.md')
-        ])
-        
-        let combinedText = ''
-        if (changelogRes.ok) {
-          combinedText += await changelogRes.text()
-        }
-        if (historyRes.ok) {
-          const historyText = await historyRes.text()
-          combinedText += '\n\n---\n\n' + historyText
-        }
-        
-        createNewDocument({
-          markdown: combinedText,
-          fileName: 'history.md'
-        })
-        setIsStartScreen(false)
-        setStatus('status.ready')
-      } catch (error) {
-        console.error('[App] Failed to dynamically merge and open history.md', error)
+  // '이전 내역(History) 전체 보기' 마크다운 클릭 감지 동적 병합 함수
+  const openHistoryAndMerge = useCallback(async () => {
+    try {
+      const [changelogRes, historyRes] = await Promise.all([
+        fetch('/changelog.md'),
+        fetch('/history.md')
+      ])
+      
+      let changelogText = ''
+      let historyText = ''
+      
+      if (changelogRes.ok) {
+        changelogText = await changelogRes.text()
       }
-    }
-
-    window.addEventListener('open-changelog-history', handleOpenHistory)
-    return () => {
-      window.removeEventListener('open-changelog-history', handleOpenHistory)
+      if (historyRes.ok) {
+        historyText = await historyRes.text()
+      }
+      
+      // Parse versions using regex: ##\s*\[([0-9]+\.[0-9]+\.[0-9]+)\]
+      const changelogVerMatch = changelogText.match(/##\s*\[([0-9]+\.[0-9]+\.[0-9]+)\]/)
+      const historyVerMatch = historyText.match(/##\s*\[([0-9]+\.[0-9]+\.[0-9]+)\]/)
+      
+      const changelogVer = changelogVerMatch ? changelogVerMatch[1] : null
+      const historyVer = historyVerMatch ? historyVerMatch[1] : null
+      
+      let combinedText = ''
+      if (changelogVer && historyVer && compareVersions(changelogVer, historyVer) > 0) {
+        // If changelog version is higher than history version, automatically prepends changelog!
+        combinedText = changelogText + '\n\n---\n\n' + historyText
+      } else {
+        // Otherwise, just show historyText
+        combinedText = historyText
+      }
+      
+      createNewDocument({
+        markdown: combinedText,
+        fileName: 'history.md'
+      })
+      setIsStartScreen(false)
+      setStatus('status.ready')
+    } catch (error) {
+      console.error('[App] Failed to dynamically merge and open history.md', error)
     }
   }, [createNewDocument, setStatus])
+
+  // '이전 내역(History) 전체 보기' 마크다운 클릭 감지 동적 병합 리스너
+  useEffect(() => {
+    window.addEventListener('open-changelog-history', openHistoryAndMerge)
+    return () => {
+      window.removeEventListener('open-changelog-history', openHistoryAndMerge)
+    }
+  }, [openHistoryAndMerge])
 
   const handleRecentFileSelect = async (file: RecentFileEntry) => {
     if (file.backend === 'browser' || !file.path) {
@@ -1053,6 +1071,7 @@ export function App() {
           onShowVersionInfo={() => {
             void handleShowVersionInfo()
           }}
+          onShowHistory={openHistoryAndMerge}
           onShowStartGuide={() => {
             handleStartGuidePreference(!hideStartGuide)
           }}
@@ -1138,6 +1157,8 @@ export function App() {
             void handleOpenExternalUrl(url)
           }}
           primaryLabel={aboutPrimaryLabel}
+          onHistoryAction={openHistoryAndMerge}
+          historyLabel={t('menu.help.viewHistory')}
           onPrimaryAction={async () => {
             try {
               const response = await fetch('/changelog.md')
