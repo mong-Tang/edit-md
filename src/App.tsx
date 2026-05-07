@@ -502,8 +502,15 @@ export function App() {
       
       let combinedText = ''
       if (changelogVer && historyVer && compareVersions(changelogVer, historyVer) > 0) {
-        // Now changelog.md is 100% pure, so we can directly concatenate it with historyText!
-        combinedText = changelogText.trim() + '\n\n---\n\n' + historyText.trim()
+        // Filter out any lines containing 'open-history' or '이전 변경 이력' to prevent redundant links!
+        const cleanChangelog = changelogText
+          .split('\n')
+          .filter(line => !line.includes('open-history') && !line.includes('이전 변경 이력'))
+          .join('\n')
+          .replace(/\n\s*---\s*$/, '') // Remove trailing horizontal rule if left at the bottom
+          .trim()
+
+        combinedText = cleanChangelog + '\n\n---\n\n' + historyText.trim()
       } else {
         // Otherwise, just show historyText
         combinedText = historyText.trim()
