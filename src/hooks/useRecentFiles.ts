@@ -5,7 +5,7 @@ import type { RecentFileEntry } from '../types/recentFile'
 const STORAGE_KEY = 'edit-md-recent-files'
 const MAX_RECENT_FILES = 10
 
-function normalizePath(p: string): string {
+function normalizePath(p: string | undefined): string {
   if (!p) return ''
   let normalized = p.replace(/\\/g, '/')
   if (/^[A-Za-z]:/.test(normalized)) {
