@@ -50,8 +50,14 @@ npm run dev
 
 ## 개발 워크플로우 및 기록 규칙
 
-- **수정 사항 기록**: 코드를 수정하거나 기능을 개선한 경우, 반드시 **`docs/DEV_LOG.md`**에 변경 내역(Added, Changed, Fixed)을 기록합니다.
-- **배포 준비**: 정식 업데이트 시 `docs/DEV_LOG.md`의 내용을 정리하여 `public/changelog.md`로 이동하고 버전을 갱신합니다.
+- **기술 내역 기록 (`docs/DEV_LOG.md`)**: 개발 단계의 디테일한 기술 해결 과정 및 누적 개발 일지는 내부용 기록실인 **`docs/DEV_LOG.md`**에 상세하게 실시간 누적합니다.
+- **최신 배포 공지 (`public/changelog.md`)**:
+  - 새로운 기능을 배포(Release)할 시, **`public/changelog.md`에 오직 '이번에 새로 수정된 최신 버전 딱 한 건'만** 깔끔하게 수록해 둡니다.
+  - 최신 소식지 맨 아래에는 언제나 동적 이력 호출 링크인 `👉 [이전 변경 이력(History) 전체 확인하기](open-history)`를 장착해 둡니다.
+- **과거 역사 보관 (`public/history.md`)**:
+  - 새로운 버전을 릴리즈할 때, **기존 `public/changelog.md`에 수록되어 있던 이전 최신 버전의 내용**을 과거 아카이브 파일인 **`public/history.md` 파일의 맨 최상단으로 옮겨(Cut & Paste) 누적 보관**합니다.
+- **지능형 실시간 동적 병합 (On-the-Fly Merging)**:
+  - 사용자가 앱 내부에서 "이전 내역 확인" 링크를 클릭하는 순간, React 엔진이 `/changelog.md`(최신 정보)와 `/history.md`(과거 누적 역사)를 비동기로 불러와 가름줄(`---`)과 함께 메모리에서 즉석 병합하여 완결판 이력 문서인 `history.md` 탭으로 띄워주는 고도의 다이내믹 라우팅이 작동합니다.
 
 ## 웹 빌드
 
