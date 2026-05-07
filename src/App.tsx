@@ -502,18 +502,11 @@ export function App() {
       
       let combinedText = ''
       if (changelogVer && historyVer && compareVersions(changelogVer, historyVer) > 0) {
-        // 병합 시 changelogText 하단에 적힌 불필요한 '이전 이력 가기' 안내 링크 제거
-        let cleanChangelog = changelogText
-        const lastSeparatorIndex = changelogText.lastIndexOf('\n---')
-        if (lastSeparatorIndex !== -1) {
-          cleanChangelog = changelogText.substring(0, lastSeparatorIndex).trim()
-        }
-
-        // If changelog version is higher than history version, automatically prepends changelog!
-        combinedText = cleanChangelog + '\n\n---\n\n' + historyText
+        // Now changelog.md is 100% pure, so we can directly concatenate it with historyText!
+        combinedText = changelogText.trim() + '\n\n---\n\n' + historyText.trim()
       } else {
         // Otherwise, just show historyText
-        combinedText = historyText
+        combinedText = historyText.trim()
       }
       
       createNewDocument({
@@ -1172,9 +1165,11 @@ export function App() {
               if (response.ok) {
                 const text = await response.text()
                 
-                // 새 탭으로 changelog 열기 (createNewDocument가 내부적으로 빈 탭 교체 처리)
+                // 새 탭으로 changelog 열기 시에만 하단에 이전 이력 보기용 동적 가이드 꼬리표 부착!
+                const footer = '\n\n---\n\n💡 **이전 업데이트 이력 및 과거 버그 수정 건들이 궁금하신가요?**\n👉 [이전 변경 이력(History) 전체 확인하기](open-history)'
+                
                 createNewDocument({
-                  markdown: text,
+                  markdown: text.trim() + footer,
                   fileName: 'changelog.md'
                 })
                 setIsStartScreen(false)
