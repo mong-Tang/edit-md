@@ -475,6 +475,41 @@ export function App() {
     return () => window.clearTimeout(timerId)
   }, [isStartScreen, activeTabId])
 
+  // '이전 내역(History) 전체 보기' 마크다운 클릭 감지 동적 병합 리스너
+  useEffect(() => {
+    const handleOpenHistory = async () => {
+      try {
+        const [changelogRes, historyRes] = await Promise.all([
+          fetch('/changelog.md'),
+          fetch('/history.md')
+        ])
+        
+        let combinedText = ''
+        if (changelogRes.ok) {
+          combinedText += await changelogRes.text()
+        }
+        if (historyRes.ok) {
+          const historyText = await historyRes.text()
+          combinedText += '\n\n---\n\n' + historyText
+        }
+        
+        createNewDocument({
+          markdown: combinedText,
+          fileName: 'history.md'
+        })
+        setIsStartScreen(false)
+        setStatus('status.ready')
+      } catch (error) {
+        console.error('[App] Failed to dynamically merge and open history.md', error)
+      }
+    }
+
+    window.addEventListener('open-changelog-history', handleOpenHistory)
+    return () => {
+      window.removeEventListener('open-changelog-history', handleOpenHistory)
+    }
+  }, [createNewDocument, setStatus])
+
   const handleRecentFileSelect = async (file: RecentFileEntry) => {
     if (file.backend === 'browser' || !file.path) {
       removeRecentFile(file)

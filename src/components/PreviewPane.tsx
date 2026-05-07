@@ -127,6 +127,11 @@ export function PreviewPane({ currentFilePath, markdown, previewRef }: PreviewPa
     const trimmedHref = href.trim()
     const normalizedHref = trimmedHref.toLowerCase()
 
+    if (trimmedHref === 'open-history' || trimmedHref === 'history.md' || trimmedHref === './history.md') {
+      window.dispatchEvent(new CustomEvent('open-changelog-history'))
+      return
+    }
+
     try {
       if (EXTERNAL_PROTOCOLS.some((protocol) => normalizedHref.startsWith(protocol))) {
         if (tauriRuntime) {
